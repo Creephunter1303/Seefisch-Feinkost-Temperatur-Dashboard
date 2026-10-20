@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="color-scheme" content="light">
+<title>Temperaturen · Seefisch</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="seefisch.css">
+<link rel="stylesheet" href="temperatur.css">
+</head>
+<body>
+<div class="app" id="app"><main class="liste"><div class="leer zustand"><span class="dreher" aria-hidden="true"></span> Lädt …</div></main></div>
+<script>
+// Notbremse: Lässt sich ein App-Teil nicht laden (z. B. abgebrochene Verbindung beim
+// allerersten Start), bliebe sonst „Lädt …“ für immer stehen.
+setTimeout(function () {
+  if (window.__gestartet) return;
+  document.getElementById('app').innerHTML = '<main class="liste"><div class="leer zustand fehler"><strong>Die App konnte nicht starten.</strong> Bitte die Verbindung prüfen und neu laden.<button class="knopf-2" onclick="location.reload()">Neu laden</button></div></main>';
+}, 15000);
+</script>
+<script type="module" src="js/main.js"></script>
+<noscript><p style="padding:20px;font-size:18px">Diese App braucht JavaScript.</p></noscript>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Tests · Temperaturen</title>
+<style>body{font:16px/1.4 system-ui,sans-serif;margin:20px;background:#fff;color:#111}.ok{color:#14532D}.fehler{color:#8F1D1D;font-weight:600}pre{white-space:pre-wrap}</style></head>
+<body>
+<h1>Tests</h1>
+<pre id="aus">läuft …</pre>
+<script type="module">
+// Browser-Läufer für tests/status.test.mjs (falls kein Node installiert ist).
+// Projektordner per lokalem Server ausliefern und tests/index.html öffnen.
+import { ergebnisse, fehler } from './status.test.mjs';
+const aus = document.getElementById('aus');
+aus.innerHTML = ergebnisse.map((e) => '<span class="' + (e.ok ? 'ok">ok     ' : 'fehler">FEHLER ') + e.name + (e.ok ? '' : '\n       ' + e.fehler) + '</span>').join('\n') +
+  '\n\n<b id="summe">' + (ergebnisse.length - fehler.length) + ' von ' + ergebnisse.length + ' Tests bestanden</b>';
+document.title = (fehler.length ? 'FEHLER' : 'OK') + ' · Tests';
+</script>
+</body>
+</html>

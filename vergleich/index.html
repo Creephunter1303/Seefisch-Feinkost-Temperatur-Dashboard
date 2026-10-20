@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vergleich Vorlage · App</title>
+<style>
+  body { margin: 0; padding: 20px; font: 16px/1.4 system-ui, sans-serif; background: #E8ECF0; color: #111827; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  p { margin: 0 0 20px; color: #3F4856; }
+  section { background: #fff; border-radius: 12px; padding: 16px; margin: 0 0 20px; box-shadow: inset 0 0 0 1px #D5DCE3; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .paar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  figure { margin: 0; } figcaption { font-size: 14px; color: #3F4856; margin-bottom: 6px; }
+  img { width: 100%; height: auto; border: 1px solid #D5DCE3; border-radius: 6px; background: #fff; }
+</style>
+</head>
+<body>
+<h1>Vorlage (links) · echte App mit echten Daten (rechts)</h1>
+<p>Links vorlage/screens/ (Prototyp mit Beispieldaten), rechts vergleich/echt/ (erzeugt mit werkzeuge/screenshots.py). Abweichungen stehen in vergleich/ABWEICHUNGEN.md.</p>
+<div id="liste"></div>
+<script>
+const PAARE = [
+  ['Übersicht hoch', '00-alles-ok-hoch', '00-alles-hoch'],
+  ['Übersicht quer', '02-uebersicht-quer', '02-uebersicht-quer'],
+  ['Smartphone', '00-alles-ok-smartphone', '00-smartphone'],
+  ['Smartphone Detail', '00-smartphone-detail', '00-smartphone-detail'],
+  ['Detail hoch (6 Std)', '05-detail-hoch', '05-detail-hoch'],
+  ['Detail quer', '06-detail-quer', '06-detail-quer'],
+  ['Detail 7 Tage', '07-detail-7tage-hoch', '07-detail-7tage-hoch'],
+  ['Zeitraum-Blatt', '08-zeitraum-blatt-hoch', '08-zeitraum-blatt-hoch'],
+  ['Letzte 3 Monate', '09-detail-3monate-hoch', '09-detail-3monate-hoch'],
+  ['Letzter Monat quer', '10-detail-letzter-monat-quer', '10-detail-letzter-monat-quer'],
+  ['Eigener Zeitraum', '11-detail-eigen-hoch', '11-detail-eigen-hoch'],
+  ['Letztes Jahr (keine Daten)', '12-detail-letztes-jahr-hoch', '12-detail-letztes-jahr-hoch'],
+  ['Einstellungen', '13-einstellungen-hoch', '13-einstellungen-hoch'],
+  ['Ohne Netz', '14-ohne-netz-hoch', '14-ohne-netz-hoch'],
+  ['Standortwahl', '15-standortwahl-hoch', '15-standortwahl-hoch'],
+  ['Handy, ein Standort', '17-handy', '17-handy-gefiltert'],
+  ['PC', '18-desktop', '18-desktop'],
+  ['Handy Zeitraum-Blatt', '19-handy-zeitraum', '19-handy-zeitraum'],
+  ['Admin: Anmelden (neu, keine Vorlage)', null, '30-admin-anmelden-hoch'],
+];
+document.getElementById('liste').innerHTML = PAARE.map(([t, a, b]) =>
+  '<section><h2>' + t + '</h2><div class="paar">' +
+  '<figure><figcaption>Vorlage ' + (a || '–') + '</figcaption>' + (a ? '<img loading="lazy" src="../vorlage/screens/' + a + '.png" alt="">' : '') + '</figure>' +
+  '<figure><figcaption>App ' + b + '</figcaption><img loading="lazy" src="echt/' + b + '.png" alt=""></figure></div></section>').join('');
+</script>
+</body>
+</html>

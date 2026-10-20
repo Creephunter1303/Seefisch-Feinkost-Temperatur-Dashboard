@@ -1,0 +1,233 @@
+/* =========================================================================
+   Temperaturen · App-Regeln. seefisch.css bleibt unverändert.
+   Übernommen aus vorlage/index.html (v0.3), ohne Prototyp-Leiste und ohne
+   „Am Wagen auslesen“ (Phase 2). Ergänzt: Sonderzustände, Einrichtung, Admin.
+   ========================================================================= */
+:root {
+  /* Status-Erweiterung für Temperaturen (Designsystem Abschnitt 4: Bernstein nur bei echter Dreistufigkeit) */
+  --achtung-flaeche: var(--hinweis-flaeche);
+  --achtung-rand: var(--hinweis-rand);
+  --achtung-text: var(--hinweis-text);
+  --achtung-punkt: #B45309;
+  --offline-flaeche: #EEF1F4;
+  --offline-rand: #C5CED8;
+  --offline-text: #4A5563;
+  --offline-punkt: #6B7785;
+  --diagramm-linie: var(--blau-rahmen);
+  --diagramm-band: #D6E2EE;
+  --diagramm-gitter: #E3E8ED;
+  --schraffur: #DCE2E8;
+  color-scheme: light;
+}
+html, body { background: var(--hintergrund); }
+body { min-height: 100%; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+body.blatt-offen { overflow: hidden; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--flaeche); }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--blau-rahmen); outline-offset: 2px; }
+
+/* ---------- App-Gerüst: die Seite scrollt als Ganzes, der Kopf klebt oben ---------- */
+.app { min-height: 100vh; min-height: 100dvh; overflow: visible; }
+.kopf { top: env(safe-area-inset-top, 0px); }
+.kopf-innen { display: flex; flex-direction: column; gap: 14px; }
+.baender { display: flex; flex-direction: column; }
+.liste { overflow: visible; padding-bottom: 32px; gap: 18px; }
+.app.schmal { --rand: 16px; }
+.app.quer { --rand: 24px; }
+.kopf-zeile .platzhalter { flex: 1; }
+.auswahl .pfeil { margin-left: 2px; }
+.app.schmal .auswahl { font-size: 18px; padding: 0 12px; }
+.auswahl span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app.schmal .seitentitel { font-size: 22px; overflow-wrap: anywhere; }
+.sync-punkt.laedt::before { background: var(--offline-punkt); }
+
+/* ---------- Raster der Sensor-Karten ---------- */
+.raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app.quer .raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.app.breit .raster { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+.app.breit .liste, .app.breit .kopf-innen { width: 100%; max-width: 1400px; margin-inline: auto; }
+.gruppe .name svg { color: var(--blau); }
+.gruppe-block { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------- Temperatur-Karte: ganze Karte trägt den Status, Wort statt Symbol ---------- */
+.karte.temp { width: 100%; text-align: left; color: inherit; font: inherit; padding: 0; border-width: 2px; border-style: solid; }
+.karte.temp .t-oben { padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.karte.temp .t-name { font-size: 20px; color: var(--text-2); overflow-wrap: anywhere; }
+.karte.temp .t-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.karte.temp .t-wert { font-family: var(--schrift-schmal); font-weight: 700; font-size: 42px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.karte.temp .spark { width: 112px; height: 40px; flex-shrink: 0; }
+.app.schmal .karte.temp .t-wert { font-size: 36px; }
+.app.schmal .karte.temp .spark { width: 100%; }
+.karte.temp .t-hinweis { display: flex; align-items: flex-start; gap: 6px; font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.25; }
+.karte.temp .t-hinweis svg { color: var(--kommentar-symbol); flex-shrink: 0; margin-top: 1px; }
+.karte.temp .status-zeile { min-height: 44px; padding: 6px 16px; flex-wrap: wrap; row-gap: 2px; }
+.karte.temp .status-zeile .t-grenze { margin-left: auto; }
+.karte.temp .status-text { font-size: 18px; line-height: 1.2; }
+.karte.temp .t-grenze { font-size: 16px; color: var(--text-3); white-space: nowrap; }
+
+.karte.temp.st-ok { background: var(--gruen-flaeche); border-color: var(--gruen-rand); }
+.karte.temp.st-ok .t-wert { color: var(--gruen-inhalt); }
+.karte.temp.st-ok .status-zeile { border-color: var(--gruen-linie); color: var(--gruen-text); }
+
+.karte.temp.st-achtung { background: var(--achtung-flaeche); border: 3px solid var(--achtung-rand); box-shadow: 0 6px 16px rgba(180,83,9,.14); }
+.karte.temp.st-achtung .t-wert { color: var(--achtung-text); }
+.karte.temp.st-achtung .status-zeile { border-color: var(--achtung-rand); color: var(--achtung-text); }
+
+.karte.temp.st-alarm, .karte.temp.st-meldet { background: var(--rot-flaeche); border: 3px solid var(--rot-punkt); box-shadow: 0 6px 16px rgba(180,35,35,.16); }
+.karte.temp.st-alarm .t-wert { color: var(--rot-inhalt); }
+.karte.temp.st-alarm .status-zeile, .karte.temp.st-meldet .status-zeile { border-color: var(--rot-linie); color: var(--rot-text); }
+.karte.temp.st-meldet .t-wert { color: var(--rot-inhalt); font-size: 30px; white-space: normal; }
+.karte.temp .t-wert small.zuletzt { display: block; font-family: var(--schrift); font-size: 16px; font-weight: 500; margin: 0 0 4px; }
+
+.karte.temp.st-offline { background: var(--offline-flaeche); border-color: var(--offline-rand); }
+.karte.temp.st-offline .t-wert { color: var(--offline-text); font-size: 30px; }
+.karte.temp.st-offline .t-name { color: var(--offline-text); }
+.karte.temp.st-offline .status-zeile { border-color: var(--offline-rand); color: var(--offline-text); }
+.karte.temp.st-offline .status-text { font-weight: 500; }
+
+/* ---------- Auswahl-Blatt (Standort, Zeitraum) ---------- */
+.blatt-grund { position: fixed; inset: 0; z-index: 40; background: rgba(17,24,39,.38); display: flex; flex-direction: column; }
+.blatt { background: var(--flaeche); padding: 16px var(--rand) 20px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 30px rgba(17,24,39,.25); max-height: 92%; overflow-y: auto; padding-top: max(16px, env(safe-area-inset-top, 0px)); }
+.app.breit .blatt { width: 100%; max-width: 760px; margin-inline: auto; border-radius: 0 0 14px 14px; }
+.blatt h2 { margin: 0 0 6px; font-family: var(--schrift-schmal); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.blatt h3 { margin: 14px 0 4px; font-family: var(--schrift-schmal); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
+.blatt-zeile { min-height: 64px; border-radius: var(--radius-knopf); background: var(--kachel); color: var(--kachel-text); display: flex; align-items: center; gap: 12px; padding: 8px 16px; font-size: 20px; text-align: left; flex-wrap: wrap; }
+.blatt-zeile .n { flex: 1; font-weight: 600; min-width: 0; }
+.blatt-zeile.aktiv { background: var(--blau-aktiv); color: var(--blau); box-shadow: inset 0 0 0 2px var(--blau-aktiv-rand); }
+.blatt-zeile .zusammen { display: flex; gap: 12px; font-size: 16px; color: var(--text-3); flex-wrap: wrap; }
+.mini { display: inline-flex; align-items: center; gap: 6px; }
+.mini::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.mini.ok { color: var(--gruen-punkt); } .mini.achtung { color: var(--achtung-punkt); } .mini.alarm { color: var(--rot-punkt); } .mini.offline { color: var(--offline-punkt); }
+.mini span { color: var(--text-3); }
+.vorlagen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.app.schmal .vorlagen { grid-template-columns: minmax(0, 1fr); }
+.vorlagen .blatt-zeile { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+.vorlagen .blatt-zeile .z { font-size: 16px; color: var(--text-3); font-weight: 500; }
+.vorlagen .blatt-zeile.aktiv .z { color: var(--blau); }
+.feld-zeile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.feld label { font-size: 16px; font-weight: 600; color: var(--text-3); }
+.feld input { height: 56px; width: 100%; min-width: 0; border: 0; border-radius: var(--radius-knopf); background: var(--flaeche); box-shadow: inset 0 0 0 1.5px var(--blau-auswahl-rand); padding: 0 12px; font-family: var(--schrift); font-size: 20px; color: var(--text); }
+.fehler-text { font-size: 17px; font-weight: 600; color: var(--rot-text); }
+.blatt .primaer { margin-top: 10px; height: 64px; font-size: 22px; }
+
+/* ---------- Detailseite ---------- */
+.detail { padding: 16px var(--rand) 32px; display: flex; flex-direction: column; gap: 14px; }
+.detail-raster { display: flex; flex-direction: column; gap: 14px; }
+.detail-raster > * { min-width: 0; }
+.b-zeit { display: flex; flex-direction: column; gap: 8px; }
+/* quer/PC: links Wert + Kennzahlen + Liste, rechts Zeitraum + Diagramm */
+.app.quer .detail-raster, .app.breit .detail-raster { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); grid-template-areas: "wert zeit" "wert chart" "kz chart" "abw chart" "rest chart"; grid-template-rows: auto auto auto auto 1fr; align-items: start; }
+.app.quer .b-wert, .app.breit .b-wert { grid-area: wert; }
+.app.quer .b-zeit, .app.breit .b-zeit { grid-area: zeit; }
+.app.quer .b-chart, .app.breit .b-chart { grid-area: chart; }
+.app.quer .b-kz, .app.breit .b-kz { grid-area: kz; }
+.app.quer .b-abw, .app.breit .b-abw { grid-area: abw; }
+.app.breit .detail { max-width: 1400px; margin-inline: auto; width: 100%; }
+.spalte { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.karte.temp.gross .t-wert { font-size: 60px; }
+.karte.temp.gross.st-offline .t-wert, .karte.temp.gross.st-meldet .t-wert { font-size: 40px; }
+.karte.temp.gross { cursor: default; }
+.zeitraum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.app.schmal .zeitraum { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.app.schmal .zeitraum .tag:nth-child(5) { grid-column: span 2; }
+.zeitraum .tag { height: 60px; font: inherit; padding: 0 4px; }
+.zeitraum .tag .wt { font-size: 16px; }   /* seefisch.css: 15 px – Auftrag verlangt Text ≥ 16 px */
+.zeitraum .tag .nr { font-size: 24px; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.zeitraum .tag .nr.lang { font-size: 19px; }
+.zeitraum .tag .text { display: flex; flex-direction: column; align-items: center; line-height: 1.1; min-width: 0; }
+.zeitraum-text { font-size: 17px; color: var(--text-2); padding: 0 2px; }
+.zeitraum-text b { font-weight: 600; }
+.kennzahlen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kennzahl { background: var(--flaeche); border-radius: var(--radius-karte); padding: 10px 12px; box-shadow: inset 0 0 0 1px var(--linie); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kennzahl .k { font-size: 16px; color: var(--text-3); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+.kennzahl .v { font-family: var(--schrift-schmal); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kennzahl .z { font-size: 16px; color: var(--text-3); }
+.abschnitt.diagramm { padding: 14px 10px 10px 4px; position: relative; }
+.diagramm-flaeche { position: relative; touch-action: pan-y; }
+.diagramm svg { width: 100%; height: auto; overflow: visible; }
+.diagramm text { font-family: var(--schrift); font-size: 16px; fill: var(--text-3); }
+.diagramm .luecke-label { fill: var(--offline-text); }
+.diagramm .leer { margin: 0 6px 0 10px; box-shadow: none; background: transparent; padding: 10px 4px; }
+.blase { position: absolute; top: 0; pointer-events: none; background: var(--text); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 17px; font-weight: 600; white-space: nowrap; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 6px 12px 0; font-size: 16px; color: var(--text-3); }
+.legende i { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--diagramm-linie); vertical-align: middle; margin-right: 6px; }
+.legende i.rot { border-color: var(--rot-punkt); }
+.legende i.grenze { border-top: 2px dashed var(--rot-punkt); }
+.legende i.band { height: 12px; border: 0; background: var(--diagramm-band); }
+.legende i.luecke { height: 12px; border: 0; background: repeating-linear-gradient(135deg, var(--schraffur) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1px var(--offline-rand); }
+.abweichung { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--linie); flex-wrap: wrap; }
+.abweichung:first-of-type { border-top: 0; }
+.abweichung .zeit { font-family: var(--schrift-schmal); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; }
+.abweichung .info { flex: 1; font-size: 16px; color: var(--text-3); min-width: 140px; }
+.abschnitt .mehr-zeile { font-size: 17px; color: var(--text-2); padding: 10px 0 2px; border-top: 1px solid var(--linie); }
+.status-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 16px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.status-chip.ok { background: var(--gruen-flaeche); color: var(--gruen-text); box-shadow: inset 0 0 0 1.5px var(--gruen-rand); }
+.status-chip.achtung { background: var(--achtung-flaeche); color: var(--achtung-text); box-shadow: inset 0 0 0 1.5px var(--achtung-rand); }
+.status-chip.alarm, .status-chip.meldet { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.status-chip.offline { background: var(--offline-flaeche); color: var(--offline-text); box-shadow: inset 0 0 0 1.5px var(--offline-rand); }
+.leer.klein { font-size: 17px; padding: 12px 14px; }
+
+
+/* ---------- Status „keine Grenze hinterlegt“: grau, nie still OK ---------- */
+.karte.temp.st-ohne { background: var(--offline-flaeche); border-color: var(--offline-rand); }
+.karte.temp.st-ohne .t-wert { color: var(--text-2); }
+.karte.temp.st-ohne .status-zeile { border-color: var(--offline-rand); color: var(--offline-text); }
+.status-chip.ohne { background: var(--offline-flaeche); color: var(--offline-text); box-shadow: inset 0 0 0 1.5px var(--offline-rand); }
+
+/* ---------- Sonderzustände (lädt, ohne Netz, Fehler) wie in der Bestell-App ---------- */
+.leer.zustand { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; line-height: 1.4; }
+.leer.zustand:has(> .dreher:first-child) { flex-direction: row; align-items: center; }
+.leer.zustand strong { color: var(--text); font-weight: 600; }
+.leer.fehler { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.leer.fehler strong { color: var(--rot-text); }
+.leer .klein { font-size: 16px; overflow-wrap: anywhere; }
+.dreher { display: inline-block; width: 22px; height: 22px; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: drehen .8s linear infinite; flex-shrink: 0; vertical-align: -5px; }
+@keyframes drehen { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dreher { animation-duration: 3s; } }
+.knopf-2 { min-height: var(--tipp-min); padding: 0 18px; border-radius: var(--radius-knopf); background: var(--sekundaer); color: var(--sekundaer-text); font-size: 19px; font-weight: 600; box-shadow: inset 0 0 0 1.5px #C5CED8; }
+.knopf-2.inline { min-height: 48px; margin-left: 8px; }
+.knopf-reihe { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 10px; }
+.meldung { border-radius: var(--radius-feld); padding: 14px 16px; font-weight: 600; font-size: 18px; margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.meldung.fehler { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 2px var(--rot-rand); }
+.meldung.info { background: var(--blau-feld); color: var(--blau-feld-text); }
+
+/* ---------- Formulare: Einrichtung, Anmeldung, Sensor bearbeiten ---------- */
+.formular { display: flex; flex-direction: column; gap: 14px; }
+.formular .abschnitt { display: flex; flex-direction: column; gap: 14px; }
+.formular .abschnitt h2 { margin-bottom: 0; }
+.feld textarea { width: 100%; min-width: 0; border: 0; border-radius: var(--radius-knopf); background: var(--flaeche); box-shadow: inset 0 0 0 1.5px var(--blau-auswahl-rand); padding: 12px; font-family: var(--schrift); font-size: 20px; color: var(--text); resize: vertical; }
+.feld .hilfe, .hinweis-text { font-size: 16px; color: var(--text-3); line-height: 1.35; margin: 0; }
+.erklaerung { font-size: 17px; color: var(--text-2); margin: 0 0 12px; line-height: 1.35; }
+.formular .primaer[disabled] { opacity: .6; cursor: default; }
+.formular > .primaer { margin-top: 4px; }
+.einstellungen .schalter-zeile { flex-wrap: wrap; }
+.einstellungen .schalter-text { min-width: 200px; }
+
+/* ---------- Admin ---------- */
+.admin-liste { display: flex; flex-direction: column; gap: 8px; }
+.admin-zeile .n { display: flex; flex-direction: column; gap: 2px; }
+.admin-zeile .z { font-size: 16px; font-weight: 500; color: var(--text-3); }
+.admin-zeile svg { color: var(--text-3); flex-shrink: 0; }
+.admin-zeile.aus { background: transparent; box-shadow: inset 0 0 0 1.5px #DDE3E9; }
+.angemeldet { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 18px; color: var(--text-2); }
+.angemeldet span { flex: 1; min-width: 200px; overflow-wrap: anywhere; }
+.neu-knopf { margin-top: 14px; }
+.abweichung.protokoll .zeit { font-size: 20px; min-width: 120px; }
+.abweichung.protokoll .info { overflow-wrap: anywhere; line-height: 1.35; }
+.abweichung.protokoll .info b { color: var(--text-2); font-weight: 600; }
+.app.breit .einstellungen { max-width: 820px; }
+
+/* ---------- Einstellungen ---------- */
+.einstellungen { padding: 16px var(--rand) 32px; display: flex; flex-direction: column; gap: 14px; }
+.app.breit .einstellungen { margin-inline: auto; width: 100%; }
+.regel { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid var(--linie); flex-wrap: wrap; }
+.regel:first-of-type { border-top: 0; }
+.regel .status-chip { width: 132px; justify-content: center; }
+.regel span.t { flex: 1; font-size: 17px; color: var(--text-2); min-width: 180px; }
+.info-zeile { font-size: 17px; color: var(--text-2); padding: 6px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.info-zeile b { font-weight: 600; min-width: 170px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .karte.temp, .blatt-zeile, .tag { transition: transform .08s ease; }
+  .karte.temp:active, .blatt-zeile:active, .tag:active { transform: scale(.985); }
+}

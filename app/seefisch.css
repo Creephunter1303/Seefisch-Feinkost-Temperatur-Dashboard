@@ -1,0 +1,183 @@
+/* =========================================================================
+   Seefisch-Feinkost · Designsystem für Tablet-Dashboards  (Stand 17.10.2026)
+   Entstanden aus der Bestellübersicht (Vorlage F6 v3.1). Gilt für alle weiteren
+   Dashboards: Temperaturen, Reinigung, Checklisten …
+   Regeln und Begründungen: DESIGNSYSTEM.md
+   Referenzgrößen: Hochformat 640 × 1072, Querformat 1072 × 640 (CSS-px, Galaxy Tab A11)
+   ========================================================================= */
+
+/* ---------- Schriften (selbst gehostet → offline) ---------- */
+@font-face { font-family: "Barlow"; font-weight: 400; src: url("schriften/barlow-latin-400-normal.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Barlow"; font-weight: 500; src: url("schriften/barlow-latin-500-normal.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Barlow"; font-weight: 600; src: url("schriften/barlow-latin-600-normal.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("schriften/barlow-condensed-latin-600-normal.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("schriften/barlow-condensed-latin-700-normal.woff2") format("woff2"); font-display: swap; }
+
+/* ---------- Farben: jede Farbe hat GENAU EINE Bedeutung ---------- */
+:root {
+  /* Flächen & Text */
+  --hintergrund: #E8ECF0;       /* App-Hintergrund */
+  --flaeche: #FFFFFF;           /* Kopfleiste, offene Karten */
+  --linie: #D5DCE3;             /* Trennlinie Kopf */
+  --text: #111827;              /* Haupttext */
+  --text-2: #1F2937;            /* Namen, zweite Zeile */
+  --text-3: #3F4856;            /* Nebeninfos, Zähler (≥ 7:1 auch auf Grau) */
+  --icon: #3D4652;
+
+  /* BLAU = zu tun / aktive Auswahl / Hauptaktion */
+  --blau: #0B3D66;              /* Primärbutton (einziger dunkelblau gefüllter Knopf) */
+  --blau-rahmen: #4F79A3;       /* Rahmen offene Karte (3 px) */
+  --blau-feld: #E3ECF5;         /* Inhaltsfeld der offenen Karte */
+  --blau-feld-text: #111111;    /* Text im Inhaltsfeld: schwarz */
+  --blau-aktiv: #DCE7F2;        /* gewählte Kachel */
+  --blau-aktiv-rand: #5B84AB;
+  --blau-auswahl: #D3E2F0;      /* Auswahlknopf oben links (Fahrzeug …) */
+  --blau-auswahl-rand: #9FBBD6;
+
+  /* GRÜN = erledigt / in Ordnung */
+  --gruen-flaeche: #E2F3E7; --gruen-rand: #8CCB9F; --gruen-linie: #A9D8B7;
+  --gruen-punkt: #1E7A3C; --gruen-text: #14532D; --gruen-inhalt: #163A23; --gruen-name: #1F3A2A;
+
+  /* ROT = storniert / Problem / Fehler */
+  --rot-flaeche: #FBEAEA; --rot-rand: #E3A0A0; --rot-linie: #EBBDBD;
+  --rot-punkt: #B42323; --rot-text: #8F1D1D; --rot-inhalt: #4C1A1A;
+
+  /* BERNSTEIN = Hinweis („du siehst gerade …“, offline) – nie für Status */
+  --hinweis-flaeche: #FFF1CC; --hinweis-rand: #E8C46A; --hinweis-text: #4D3800; --offline: #D97706;
+  --kommentar-symbol: #B45309;  /* Symbol vor wichtigen Kommentaren */
+
+  /* Neutral */
+  --kachel: #F5F7F9; --kachel-text: #2B3440;
+  --sekundaer: #F0F3F6; --sekundaer-text: #3A4D61;
+  --aus: #A9B2BC;               /* nicht verfügbar (ausgegraut) */
+  --online: #1E7A3C;
+
+  /* Schrift */
+  --schrift: "Barlow", system-ui, sans-serif;
+  --schrift-schmal: "Barlow Condensed", "Barlow", sans-serif;
+
+  /* Maße */
+  --tipp-min: 56px;             /* kleinste Tippfläche */
+  --rand: 20px;                 /* Seitenrand hoch (quer 24px) */
+  --abstand: 12px;              /* zwischen Karten */
+  --radius-karte: 6px; --radius-feld: 5px; --radius-knopf: 10px; --radius-primaer: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--hintergrund); color: var(--text); font-family: var(--schrift); }
+button { font-family: inherit; border: 0; cursor: pointer; }
+svg { display: block; }
+.app { display: flex; flex-direction: column; overflow: hidden; background: var(--hintergrund); position: relative; }
+.app.quer { --rand: 24px; }
+.platzhalter { flex: 1; }
+
+/* ---------- Kopfleiste (klebt oben) ---------- */
+.kopf { position: sticky; top: 0; z-index: 20; background: var(--flaeche); box-shadow: 0 1px 0 var(--linie); padding: 14px var(--rand) 0; display: flex; flex-direction: column; gap: 14px; }
+.kopf-zeile { display: flex; align-items: center; gap: 12px; }
+.auswahl { height: 56px; padding: 0 16px; border-radius: 12px; background: var(--blau-auswahl); color: var(--blau); box-shadow: inset 0 0 0 1.5px var(--blau-auswahl-rand); display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; }
+.icon-knopf { width: var(--tipp-min); height: var(--tipp-min); background: transparent; color: var(--icon); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-knopf); }
+.sync-punkt { width: var(--tipp-min); height: var(--tipp-min); background: transparent; display: flex; align-items: center; justify-content: center; }
+.sync-punkt::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--online); }
+.sync-text { font-size: 16px; display: flex; align-items: center; gap: 8px; color: #8A4B05; font-weight: 600; }
+.sync-text::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--offline); }
+
+/* ---------- Unterseiten-Kopf ---------- */
+.kopf.unter { flex-direction: row; align-items: center; padding: 10px var(--rand); }
+.zurueck { height: 56px; padding: 0 16px 0 10px; border-radius: 12px; background: var(--sekundaer); color: var(--sekundaer-text); display: flex; align-items: center; gap: 4px; font-size: 19px; font-weight: 600; }
+.seitentitel { flex: 1; margin: 0; font-family: var(--schrift-schmal); font-size: 26px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+/* ---------- Wochenleiste Di–Sa (fest), Wischen wechselt die Woche ---------- */
+.wochenleiste { display: flex; align-items: stretch; gap: 6px; padding: 10px 0 14px; }
+.tage-fest { flex: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.wisch-pfeil { width: 22px; display: flex; align-items: center; justify-content: center; color: #9AA5B1; }
+.wisch-pfeil.aus { color: #D3DAE2; }
+.tag { position: relative; height: 92px; border-radius: var(--radius-knopf); background: var(--kachel); color: var(--kachel-text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.tag .wt, .tag .anz { font-size: 15px; font-weight: 500; letter-spacing: .04em; color: var(--text-3); }
+.tag .anz { font-size: 14px; letter-spacing: 0; }
+.tag .nr { font-family: var(--schrift-schmal); font-size: 30px; font-weight: 700; line-height: 1; }
+.tag.aktiv { background: var(--blau-aktiv); color: var(--blau); box-shadow: inset 0 0 0 2px var(--blau-aktiv-rand); }
+.tag.aktiv .wt, .tag.aktiv .anz { color: var(--blau); font-weight: 600; }
+.tag.ist-heute::before { content: "HEUTE"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 6px; background: var(--blau); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .06em; line-height: 1.3; }
+.tag.nicht-verfuegbar { background: transparent; box-shadow: inset 0 0 0 1.5px #DDE3E9; color: var(--aus); }
+.tag.nicht-verfuegbar .wt, .tag.nicht-verfuegbar .anz, .tag.nicht-verfuegbar .nr { color: var(--aus); }
+.tag.woche { width: 82px; flex-shrink: 0; }
+.tag.woche .nr { font-size: 26px; }
+.app.quer .tag { height: 60px; flex-direction: row; gap: 10px; }
+.app.quer .tag .text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.app.quer .tag.woche { width: 118px; }
+
+/* ---------- Hinweisband (Bernstein, fest am Kopf) ---------- */
+.hinweisband { display: flex; align-items: center; gap: 12px; margin: 0 calc(-1 * var(--rand)); padding: 0 12px 0 var(--rand); min-height: 60px; background: var(--hinweis-flaeche); border-top: 1px solid var(--hinweis-rand); border-bottom: 2px solid var(--hinweis-rand); color: var(--hinweis-text); font-size: 18px; }
+.hinweisband b { font-weight: 600; }
+.hinweisband button { height: 48px; padding: 0 16px; border-radius: var(--radius-knopf); background: #fff; color: var(--hinweis-text); font-size: 17px; font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--hinweis-rand); }
+
+/* ---------- Liste & Gruppen ---------- */
+.liste { flex: 1; overflow: hidden; padding: 18px var(--rand) 96px; display: flex; flex-direction: column; gap: var(--abstand); }
+.raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--abstand); align-items: start; }
+.gruppe { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 2px 2px 0; }
+.gruppe + * { }
+.gruppe .name { display: flex; align-items: center; gap: 8px; color: var(--blau); }
+.gruppe h2 { margin: 0; font-family: var(--schrift-schmal); font-size: 24px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+.gruppe .zusatz { display: inline-flex; align-items: center; gap: 5px; font-size: 16px; font-weight: 500; color: var(--text-3); }
+
+/* ---------- Karte „offen“ (zu tun): weiß, blauer Rahmen, Inhalt im blauen Feld ---------- */
+.karte { border-radius: var(--radius-karte); display: flex; flex-direction: column; }
+.karte.offen { background: var(--flaeche); border: 3px solid var(--blau-rahmen); box-shadow: 0 6px 16px rgba(11,61,102,.12); }
+.karte .inhalt { margin: 10px 10px 0; padding: 14px 16px; border-radius: var(--radius-feld); background: var(--blau-feld); color: var(--blau-feld-text); font-family: var(--schrift-schmal); font-weight: 600; font-size: 30px; line-height: 1.15; white-space: pre-line; }
+.karte .unten { display: flex; align-items: center; gap: 12px; padding: 8px 10px 10px 20px; }
+.karte .wer { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.karte .name { font-size: 20px; color: var(--text-2); display: inline-flex; align-items: center; gap: 10px; }
+.karte .wichtig { display: flex; align-items: center; gap: 6px; font-size: 17px; font-weight: 600; color: var(--text); }
+.karte .wichtig svg { color: var(--kommentar-symbol); }
+.karte .nebeninfo { font-size: 16px; color: var(--text-3); }
+.symbol-chip { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sekundaer); color: var(--text-3); }
+.app.quer .karte .inhalt { font-size: 27px; padding: 12px 14px; }
+
+/* ---------- Karte „erledigt“ / „storniert“: kompakt, ganz eingefärbt ---------- */
+.karte.erledigt { background: var(--gruen-flaeche); border: 2px solid var(--gruen-rand); }
+.karte.storniert { background: var(--rot-flaeche); border: 2px solid var(--rot-rand); }
+.karte.erledigt .kopfteil, .karte.storniert .kopfteil { padding: 12px 18px 10px; display: flex; flex-direction: column; gap: 2px; }
+.karte.erledigt .titel, .karte.storniert .titel { font-family: var(--schrift-schmal); font-weight: 600; font-size: 26px; line-height: 1.1; white-space: pre-line; }
+.karte.erledigt .titel { color: var(--gruen-inhalt); }
+.karte.storniert .titel { color: var(--rot-inhalt); text-decoration: line-through; }
+.karte.erledigt .klein { font-size: 18px; color: var(--gruen-name); }
+.karte.storniert .klein { font-size: 18px; color: var(--rot-inhalt); }
+.status-zeile { padding: 4px 8px 4px 16px; display: flex; align-items: center; gap: 10px; border-top: 1px solid; }
+.karte.erledigt .status-zeile { border-color: var(--gruen-linie); color: var(--gruen-text); }
+.karte.storniert .status-zeile { border-color: var(--rot-linie); color: var(--rot-text); }
+.status-punkt { width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.karte.erledigt .status-punkt { background: var(--gruen-punkt); }
+.karte.storniert .status-punkt { background: var(--rot-punkt); }
+.status-text { flex: 1; font-size: 18px; font-weight: 600; }
+.text-knopf { height: var(--tipp-min); padding: 0 14px; background: transparent; color: inherit; font-size: 17px; font-weight: 500; }
+
+/* ---------- Aktion auf der Karte: dezent, zwei Tipps ---------- */
+.aktion { width: 92px; height: 72px; border-radius: 14px; background: var(--sekundaer); color: var(--sekundaer-text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+.aktion.scharf { background: var(--gruen-flaeche); color: var(--gruen-text); box-shadow: inset 0 0 0 2px var(--gruen-rand); }
+
+/* ---------- Erledigtes eingeklappt / leer ---------- */
+.eingeklappt { height: 60px; width: 100%; border-radius: var(--radius-karte); background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 1.5px #C5CED8; display: flex; align-items: center; gap: 14px; padding: 0 18px; font-size: 18px; color: var(--text-2); }
+.eingeklappt .punkt { width: 12px; height: 12px; border-radius: 50%; }
+.eingeklappt .gruen { background: var(--gruen-punkt); }
+.eingeklappt .rot { background: var(--rot-punkt); }
+.eingeklappt .mehr { font-weight: 600; color: var(--blau); }
+.leer { padding: 18px 20px; border-radius: var(--radius-karte); background: rgba(255,255,255,.55); color: var(--text-3); font-size: 18px; box-shadow: inset 0 0 0 1.5px #D3DAE2; }
+
+/* ---------- Hauptaktion ---------- */
+.fuss-leiste { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 var(--rand) 20px; }
+.primaer { width: 100%; height: 72px; border-radius: var(--radius-primaer); background: var(--blau); color: #fff; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 23px; font-weight: 600; box-shadow: 0 6px 16px rgba(11,61,102,.3); }
+.app.quer .fuss-leiste { left: auto; padding: 0 24px 18px; }
+.app.quer .primaer { width: 420px; height: 64px; font-size: 22px; }
+
+/* ---------- Einstellungen ---------- */
+.abschnitt { background: var(--flaeche); border-radius: 12px; padding: 18px 20px; box-shadow: inset 0 0 0 1px var(--linie); }
+.abschnitt h2 { margin: 0 0 12px; font-family: var(--schrift-schmal); font-size: 22px; letter-spacing: .05em; text-transform: uppercase; }
+.schalter-zeile { display: flex; align-items: center; gap: 16px; padding: 10px 0; }
+.schalter-text { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.schalter-text strong { font-size: 19px; font-weight: 600; }
+.schalter-text span { font-size: 16px; color: var(--text-3); }
+.kipp { width: 76px; height: 44px; border-radius: 22px; background: #C7CFD8; position: relative; flex-shrink: 0; }
+.kipp::after { content: ""; position: absolute; top: 4px; left: 4px; width: 36px; height: 36px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.kipp.an { background: var(--blau-rahmen); }
+.kipp.an::after { left: 36px; }

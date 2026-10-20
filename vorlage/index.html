@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seefisch Temperaturen</title>
+<!-- @@ARTIFACT-HEAD@@ -->
+<link rel="stylesheet" href="seefisch.css">
+<style>
+/* =========================================================================
+   Temperatur-Dashboard · VORLAGE v0.3 (20.10.2026)
+   seefisch.css bleibt unverändert. Hier nur app-spezifische Regeln.
+   Layout: Übersicht = Standort-Gruppen mit Sensor-Karten (Status = ganze Karte + Wort),
+           Tipp auf Karte = Detail mit Verlauf und frei wählbarem Zeitraum. Keine Hauptaktion.
+   ========================================================================= */
+:root {
+  /* Status-Erweiterung für Temperaturen (Abschnitt 4 Designsystem: Bernstein nur bei echter Dreistufigkeit) */
+  --achtung-flaeche: var(--hinweis-flaeche);
+  --achtung-rand: var(--hinweis-rand);
+  --achtung-text: var(--hinweis-text);
+  --achtung-punkt: #B45309;
+  --offline-flaeche: #EEF1F4;
+  --offline-rand: #C5CED8;
+  --offline-text: #4A5563;
+  --offline-punkt: #6B7785;
+  --diagramm-linie: var(--blau-rahmen);
+  --diagramm-band: #D6E2EE;
+  --diagramm-gitter: #E3E8ED;
+  --schraffur: #DCE2E8;
+  /* Prototyp-Rahmen (nicht Teil der App) */
+  --demo-grund: #DCE2E8;
+  --demo-leiste: #FFFFFF;
+  --demo-text: #3F4856;
+  --geraet-rahmen: #1B2430;
+  color-scheme: light;
+}
+html, body { background: var(--demo-grund); }
+body { min-height: 100%; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--flaeche); }
+
+/* ---------- Prototyp-Leiste (gehört NICHT zur App) ---------- */
+.demo { background: var(--demo-leiste); color: var(--demo-text); border-bottom: 1px solid var(--linie);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 15px; }
+.demo strong { font-family: var(--schrift-schmal); letter-spacing: .06em; text-transform: uppercase; font-size: 16px; color: var(--text); }
+.demo .gruppe-demo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.demo .gruppe-demo > span { color: var(--text-3); }
+.demo button { height: 36px; padding: 0 12px; border-radius: 8px; background: var(--sekundaer); color: var(--sekundaer-text); font-size: 15px; font-weight: 500; }
+.demo button[aria-pressed="true"] { background: var(--blau-aktiv); color: var(--blau); box-shadow: inset 0 0 0 1.5px var(--blau-aktiv-rand); font-weight: 600; }
+.demo button:focus-visible, .app button:focus-visible, .app input:focus-visible { outline: 3px solid var(--blau-rahmen); outline-offset: 2px; }
+.buehne { display: flex; justify-content: center; padding: 24px 16px 40px; }
+.geraet { position: relative; background: var(--hintergrund); }
+.geraet.hoch { width: 640px; height: 1072px; }
+.geraet.quer { width: 1072px; height: 640px; }
+.geraet.handy { width: 390px; height: 844px; }
+.geraet.hoch, .geraet.quer, .geraet.handy { border-radius: 26px; box-shadow: 0 0 0 10px var(--geraet-rahmen), 0 20px 50px rgba(17,24,39,.35); overflow: hidden; flex-shrink: 0; }
+.buehne.voll { padding: 0; }
+.geraet.voll { width: 100%; min-height: calc(100vh - 60px); }
+.nur-clean .demo { display: none; }
+.nur-clean .buehne { padding: 0; }
+.nur-clean .geraet.hoch, .nur-clean .geraet.quer, .nur-clean .geraet.handy { border-radius: 0; box-shadow: none; }
+
+/* ---------- App-Gerüst (scrollt im Gerät, seefisch.css ist für Standbilder gebaut) ---------- */
+.app { height: 100%; overflow: visible; }
+.geraet.hoch .app, .geraet.quer .app, .geraet.handy .app { position: absolute; inset: 0; }
+.scroller { height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; position: relative; }
+.geraet.voll .scroller { height: auto; overflow: visible; }
+.geraet.voll .kopf { top: env(safe-area-inset-top, 0px); }
+.liste { overflow: visible; padding-bottom: 32px; gap: 18px; }
+.app.schmal { --rand: 16px; }
+.kopf-zeile .platzhalter { flex: 1; }
+.auswahl .pfeil { margin-left: 2px; }
+.app.schmal .auswahl { font-size: 18px; padding: 0 12px; }
+
+/* ---------- Raster der Sensor-Karten ---------- */
+.raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app.quer .raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.app.breit .raster { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+.app.breit .liste, .app.breit .kopf-innen { width: 100%; max-width: 1400px; margin-inline: auto; }
+.gruppe .name svg { color: var(--blau); }
+.gruppe-block { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------- Temperatur-Karte: ganze Karte trägt den Status, Wort statt Symbol ---------- */
+.karte.temp { width: 100%; text-align: left; color: inherit; font: inherit; padding: 0; border-width: 2px; border-style: solid; }
+.karte.temp .t-oben { padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.karte.temp .t-name { font-size: 20px; color: var(--text-2); overflow-wrap: anywhere; }
+.karte.temp .t-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.karte.temp .t-wert { font-family: var(--schrift-schmal); font-weight: 700; font-size: 42px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.karte.temp .spark { width: 112px; height: 40px; flex-shrink: 0; }
+.app.schmal .karte.temp .t-wert { font-size: 36px; }
+.app.schmal .karte.temp .spark { width: 100%; }
+.karte.temp .t-hinweis { display: flex; align-items: flex-start; gap: 6px; font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.25; }
+.karte.temp .t-hinweis svg { color: var(--kommentar-symbol); flex-shrink: 0; margin-top: 1px; }
+.karte.temp .status-zeile { min-height: 44px; padding: 6px 16px; flex-wrap: wrap; row-gap: 2px; }
+.karte.temp .status-zeile .t-grenze { margin-left: auto; }
+.karte.temp .status-text { font-size: 18px; line-height: 1.2; }
+.karte.temp .t-grenze { font-size: 16px; color: var(--text-3); white-space: nowrap; }
+
+.karte.temp.st-ok { background: var(--gruen-flaeche); border-color: var(--gruen-rand); }
+.karte.temp.st-ok .t-wert { color: var(--gruen-inhalt); }
+.karte.temp.st-ok .status-zeile { border-color: var(--gruen-linie); color: var(--gruen-text); }
+
+.karte.temp.st-achtung { background: var(--achtung-flaeche); border: 3px solid var(--achtung-rand); box-shadow: 0 6px 16px rgba(180,83,9,.14); }
+.karte.temp.st-achtung .t-wert { color: var(--achtung-text); }
+.karte.temp.st-achtung .status-zeile { border-color: var(--achtung-rand); color: var(--achtung-text); }
+
+.karte.temp.st-alarm, .karte.temp.st-meldet { background: var(--rot-flaeche); border: 3px solid var(--rot-punkt); box-shadow: 0 6px 16px rgba(180,35,35,.16); }
+.karte.temp.st-alarm .t-wert { color: var(--rot-inhalt); }
+.karte.temp.st-alarm .status-zeile, .karte.temp.st-meldet .status-zeile { border-color: var(--rot-linie); color: var(--rot-text); }
+.karte.temp.st-meldet .t-wert { color: var(--rot-inhalt); font-size: 30px; white-space: normal; }
+.karte.temp .t-wert small.zuletzt { display: block; font-family: var(--schrift); font-size: 16px; font-weight: 500; margin: 0 0 4px; }
+
+.karte.temp.st-offline { background: var(--offline-flaeche); border-color: var(--offline-rand); }
+.karte.temp.st-offline .t-wert { color: var(--offline-text); font-size: 30px; }
+.karte.temp.st-offline .t-name { color: var(--offline-text); }
+.karte.temp.st-offline .status-zeile { border-color: var(--offline-rand); color: var(--offline-text); }
+.karte.temp.st-offline .status-text { font-weight: 500; }
+
+/* ---------- Auswahl-Blatt (Standort, Zeitraum) ---------- */
+.blatt-grund { position: absolute; inset: 0; z-index: 40; background: rgba(17,24,39,.38); display: flex; flex-direction: column; }
+.geraet.voll .blatt-grund { position: fixed; }
+.blatt { background: var(--flaeche); padding: 16px var(--rand) 20px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 30px rgba(17,24,39,.25); max-height: 92%; overflow-y: auto; padding-top: max(16px, env(safe-area-inset-top, 0px)); }
+.app.breit .blatt { width: 100%; max-width: 760px; margin-inline: auto; border-radius: 0 0 14px 14px; }
+.blatt h2 { margin: 0 0 6px; font-family: var(--schrift-schmal); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.blatt h3 { margin: 14px 0 4px; font-family: var(--schrift-schmal); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
+.blatt-zeile { min-height: 64px; border-radius: var(--radius-knopf); background: var(--kachel); color: var(--kachel-text); display: flex; align-items: center; gap: 12px; padding: 8px 16px; font-size: 20px; text-align: left; flex-wrap: wrap; }
+.blatt-zeile .n { flex: 1; font-weight: 600; min-width: 0; }
+.blatt-zeile.aktiv { background: var(--blau-aktiv); color: var(--blau); box-shadow: inset 0 0 0 2px var(--blau-aktiv-rand); }
+.blatt-zeile .zusammen { display: flex; gap: 12px; font-size: 16px; color: var(--text-3); flex-wrap: wrap; }
+.mini { display: inline-flex; align-items: center; gap: 6px; }
+.mini::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.mini.ok { color: var(--gruen-punkt); } .mini.achtung { color: var(--achtung-punkt); } .mini.alarm { color: var(--rot-punkt); } .mini.offline { color: var(--offline-punkt); }
+.mini span { color: var(--text-3); }
+.vorlagen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.app.schmal .vorlagen { grid-template-columns: minmax(0, 1fr); }
+.vorlagen .blatt-zeile { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+.vorlagen .blatt-zeile .z { font-size: 16px; color: var(--text-3); font-weight: 500; }
+.vorlagen .blatt-zeile.aktiv .z { color: var(--blau); }
+.feld-zeile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.feld label { font-size: 16px; font-weight: 600; color: var(--text-3); }
+.feld input { height: 56px; width: 100%; min-width: 0; border: 0; border-radius: var(--radius-knopf); background: var(--flaeche); box-shadow: inset 0 0 0 1.5px var(--blau-auswahl-rand); padding: 0 12px; font-family: var(--schrift); font-size: 20px; color: var(--text); }
+.fehler-text { font-size: 17px; font-weight: 600; color: var(--rot-text); }
+.blatt .primaer { margin-top: 10px; height: 64px; font-size: 22px; }
+
+/* ---------- Detailseite ---------- */
+.detail { padding: 16px var(--rand) 32px; display: flex; flex-direction: column; gap: 14px; }
+.detail-raster { display: flex; flex-direction: column; gap: 14px; }
+.detail-raster > * { min-width: 0; }
+.b-zeit { display: flex; flex-direction: column; gap: 8px; }
+/* quer/PC: links Wert + Kennzahlen + Liste, rechts Zeitraum + Diagramm */
+.app.quer .detail-raster, .app.breit .detail-raster { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); grid-template-areas: "wert zeit" "wert chart" "kz chart" "abw chart" "rest chart"; grid-template-rows: auto auto auto auto 1fr; align-items: start; }
+.app.quer .b-wert, .app.breit .b-wert { grid-area: wert; }
+.app.quer .b-zeit, .app.breit .b-zeit { grid-area: zeit; }
+.app.quer .b-chart, .app.breit .b-chart { grid-area: chart; }
+.app.quer .b-kz, .app.breit .b-kz { grid-area: kz; }
+.app.quer .b-abw, .app.breit .b-abw { grid-area: abw; }
+.app.breit .detail { max-width: 1400px; margin-inline: auto; width: 100%; }
+.spalte { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.karte.temp.gross .t-wert { font-size: 60px; }
+.karte.temp.gross.st-offline .t-wert, .karte.temp.gross.st-meldet .t-wert { font-size: 40px; }
+.karte.temp.gross { cursor: default; }
+.zeitraum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.app.schmal .zeitraum { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.app.schmal .zeitraum .tag:nth-child(5) { grid-column: span 2; }
+.zeitraum .tag { height: 60px; font: inherit; padding: 0 4px; }
+.zeitraum .tag .nr { font-size: 24px; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.zeitraum .tag .nr.lang { font-size: 19px; }
+.zeitraum .tag .text { display: flex; flex-direction: column; align-items: center; line-height: 1.1; min-width: 0; }
+.zeitraum-text { font-size: 17px; color: var(--text-2); padding: 0 2px; }
+.zeitraum-text b { font-weight: 600; }
+.kennzahlen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kennzahl { background: var(--flaeche); border-radius: var(--radius-karte); padding: 10px 12px; box-shadow: inset 0 0 0 1px var(--linie); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kennzahl .k { font-size: 16px; color: var(--text-3); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+.kennzahl .v { font-family: var(--schrift-schmal); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kennzahl .z { font-size: 16px; color: var(--text-3); }
+.abschnitt.diagramm { padding: 14px 10px 10px 4px; position: relative; }
+.diagramm-flaeche { position: relative; touch-action: pan-y; }
+.diagramm svg { width: 100%; height: auto; overflow: visible; }
+.diagramm text { font-family: var(--schrift); font-size: 16px; fill: var(--text-3); }
+.diagramm .luecke-label { fill: var(--offline-text); }
+.diagramm .leer { margin: 0 6px 0 10px; box-shadow: none; background: transparent; padding: 10px 4px; }
+.blase { position: absolute; top: 0; pointer-events: none; background: var(--text); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 17px; font-weight: 600; white-space: nowrap; transform: translateX(-50%); font-variant-numeric: tabular-nums; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 6px 12px 0; font-size: 16px; color: var(--text-3); }
+.legende i { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--diagramm-linie); vertical-align: middle; margin-right: 6px; }
+.legende i.rot { border-color: var(--rot-punkt); }
+.legende i.grenze { border-top: 2px dashed var(--rot-punkt); }
+.legende i.band { height: 12px; border: 0; background: var(--diagramm-band); }
+.legende i.luecke { height: 12px; border: 0; background: repeating-linear-gradient(135deg, var(--schraffur) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1px var(--offline-rand); }
+.abweichung { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--linie); flex-wrap: wrap; }
+.abweichung:first-of-type { border-top: 0; }
+.abweichung .zeit { font-family: var(--schrift-schmal); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; }
+.abweichung .info { flex: 1; font-size: 16px; color: var(--text-3); min-width: 140px; }
+.abschnitt .mehr-zeile { font-size: 17px; color: var(--text-2); padding: 10px 0 2px; border-top: 1px solid var(--linie); }
+.status-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 16px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.status-chip.ok { background: var(--gruen-flaeche); color: var(--gruen-text); box-shadow: inset 0 0 0 1.5px var(--gruen-rand); }
+.status-chip.achtung { background: var(--achtung-flaeche); color: var(--achtung-text); box-shadow: inset 0 0 0 1.5px var(--achtung-rand); }
+.status-chip.alarm, .status-chip.meldet { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.status-chip.offline { background: var(--offline-flaeche); color: var(--offline-text); box-shadow: inset 0 0 0 1.5px var(--offline-rand); }
+.leer.klein { font-size: 17px; padding: 12px 14px; }
+
+/* ---------- Am Wagen auslesen (Bluetooth, nur auf diesem Tablet) ---------- */
+.auslesen { width: 100%; min-height: 64px; border-radius: var(--radius-knopf); background: var(--sekundaer); color: var(--sekundaer-text); box-shadow: inset 0 0 0 1.5px #C5CED8; display: flex; align-items: center; gap: 12px; padding: 8px 16px; text-align: left; font: inherit; }
+.auslesen svg { flex-shrink: 0; color: var(--blau); }
+.auslesen .t { display: flex; flex-direction: column; min-width: 0; }
+.auslesen strong { font-size: 19px; font-weight: 600; color: var(--text); }
+.auslesen .u { font-size: 16px; color: var(--text-3); }
+.ausles-liste { display: flex; flex-direction: column; gap: 8px; }
+.ausles-zeile { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-radius: var(--radius-knopf); background: var(--kachel); flex-wrap: wrap; }
+.ausles-zeile .n { flex: 1; font-size: 19px; font-weight: 600; color: var(--text-2); min-width: 0; }
+.ausles-zeile .z { font-size: 17px; font-weight: 600; }
+.ausles-zeile.wartet .z { color: var(--text-3); font-weight: 500; }
+.ausles-zeile.laeuft { background: var(--blau-feld); box-shadow: inset 0 0 0 2px var(--blau-rahmen); }
+.ausles-zeile.laeuft .z { color: var(--blau); }
+.ausles-zeile.fertig { background: var(--gruen-flaeche); box-shadow: inset 0 0 0 1.5px var(--gruen-rand); }
+.ausles-zeile.fertig .z { color: var(--gruen-text); }
+.ausles-zeile.fehler { background: var(--rot-flaeche); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.ausles-zeile.fehler .z { color: var(--rot-text); }
+.blatt .erklaerung { font-size: 17px; color: var(--text-2); margin: 4px 0; line-height: 1.35; }
+.blatt .knopf-2 { min-height: var(--tipp-min); border-radius: var(--radius-knopf); background: var(--sekundaer); color: var(--sekundaer-text); font-size: 19px; font-weight: 600; box-shadow: inset 0 0 0 1.5px #C5CED8; margin-top: 8px; }
+.legende i.gestrichelt { border-top: 3px dashed var(--diagramm-linie); }
+
+/* ---------- Einstellungen ---------- */
+.einstellungen { padding: 16px var(--rand) 32px; display: flex; flex-direction: column; gap: 14px; }
+.app.breit .einstellungen { max-width: 760px; margin-inline: auto; width: 100%; }
+.regel { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid var(--linie); flex-wrap: wrap; }
+.regel:first-of-type { border-top: 0; }
+.regel .status-chip { width: 132px; justify-content: center; }
+.regel span.t { flex: 1; font-size: 17px; color: var(--text-2); min-width: 180px; }
+.info-zeile { font-size: 17px; color: var(--text-2); padding: 6px 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.info-zeile b { font-weight: 600; min-width: 120px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .karte.temp, .blatt-zeile, .tag { transition: transform .08s ease; }
+  .karte.temp:active, .blatt-zeile:active, .tag:active { transform: scale(.985); }
+}
+</style>
+</head>
+<body>
+<div class="demo" id="demo">
+  <strong>Prototyp · Beispieldaten</strong>
+  <div class="gruppe-demo" role="group" aria-label="Szenario">
+    <span>Situation:</span>
+    <button data-szenario="allesok">Di 19:30 · alles in Ordnung</button>
+    <button data-szenario="mittag">Di 12:20 · Wagen auf Markt</button>
+    <button data-szenario="alarm">Alarm Kühlhaus</button>
+    <button data-szenario="abends">Di 18:40 · alle zurück</button>
+    <button data-szenario="ohnenetz">Tablet ohne Netz</button>
+    <button data-szenario="leer">Noch keine Sensoren</button>
+  </div>
+  <div class="gruppe-demo" role="group" aria-label="Ansicht">
+    <span>Ansicht:</span>
+    <button data-ansicht="hoch">Tablet hoch</button>
+    <button data-ansicht="quer">Tablet quer</button>
+    <button data-ansicht="handy">Smartphone</button>
+    <button data-ansicht="voll">Volle Breite</button>
+  </div>
+</div>
+<div class="buehne" id="buehne"><div class="geraet hoch" id="geraet"></div></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   Beispieldaten + Statuslogik. Struktur entspricht Supabase:
+   messwerte(uuid, zeit, sensor, temperatur_c, typ) + sensor_gruppen(sensor,
+   standort, grenztemperatur, reihenfolge, grau_nach_minuten, rot_nach_minuten)
+   ========================================================================= */
+const MIN = 60000, TAG = 24 * 60 * MIN;
+const REGEL = { toleranzMin: 15, sofortUeberGrenze: 3 };   // Alarm: > 15 Min über Grenze ODER > Grenze + 3 °C
+const AUFZEICHNUNG_SEIT = new Date(2026, 6, 1);           // Beispiel: Messung läuft seit 1. Juli 2026
+const WT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const MONAT = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+
+const ICON = {
+  pin: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/></svg>',
+  wagen: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="14" height="12" rx="1"/><path d="M15 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>',
+  frage: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><path d="M12 17.6h.01"/></svg>',
+  therm: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4.5a2 2 0 0 0-4 0v10.3a4 4 0 1 0 4 0z"/></svg>',
+  runter: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>',
+  runterKlein: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>',
+  zurueck: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  zahnrad: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  bluetooth: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>',
+  hinweis: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+};
+const WORT = { ok: "OK", achtung: "Achtung", alarm: "Alarm", offline: "Offline", meldet: "Meldet nicht" };
+const RANG = { alarm: 0, meldet: 1, achtung: 2, ok: 3, offline: 4 };
+
+/* ---------- Formatierung ---------- */
+const zahl = (v) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ",");
+const grad = (v) => zahl(v) + " °C";
+const grenzText = (g) => (Number.isInteger(g) ? String(g).replace("-", "−") : zahl(g)) + " °C";
+const p2 = (n) => String(n).padStart(2, "0");
+const uhr = (d) => p2(d.getHours()) + ":" + p2(d.getMinutes());
+const datum = (d) => p2(d.getDate()) + "." + p2(d.getMonth() + 1) + ".";
+const datumLang = (d) => datum(d) + d.getFullYear();
+const isoTag = (d) => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+const ausIso = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const mitternacht = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const gleicherTag = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function wann(d, jetzt) {
+  if (gleicherTag(d, jetzt)) return uhr(d);
+  const gestern = new Date(jetzt); gestern.setDate(gestern.getDate() - 1);
+  if (gleicherTag(d, gestern)) return "gestern " + uhr(d);
+  if (jetzt - d < 6 * TAG) return WT[d.getDay()] + " " + uhr(d);
+  return datum(d) + " " + uhr(d);
+}
+function dauer(min) {
+  if (min < 60) return Math.max(1, Math.round(min)) + " Min";
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  if (h < 24) return h + " Std" + (m && h < 3 ? " " + m + " Min" : "");
+  return Math.round(h / 24) === 1 ? "1 Tag" : Math.round(h / 24) + " Tagen";
+}
+
+/* ---------- Beispieldaten erzeugen (deterministisch) ---------- */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+const SENSOREN = [
+  { sensor: "Kühlhaus Tür",       standort: "Kühlhaus",      art: "fest",  reihenfolge: 10, grenze: 7,   basis: 3.1,  tuer: 4.6 },
+  { sensor: "Kühlhaus hinten",    standort: "Kühlhaus",      art: "fest",  reihenfolge: 11, grenze: 7,   basis: 2.4,  tuer: 1.2,
+    historie: [{ tag: new Date(2026, 8, 2), ab: 3.0, min: 95, hub: 5.2 }] },
+  { sensor: "Seico Theke",        standort: "Seico",         art: "wagen", reihenfolge: 20, grenze: 7,   basis: 3.6,  markt: 1.4, abfahrt: [6, 35], rueck: [14, 40],
+    historie: [{ tag: new Date(2026, 7, 14), ab: 12.5, min: 50, hub: 5.8 }, { tag: new Date(2026, 6, 25), ab: 13.2, min: 30, hub: 4.4 }] },
+  { sensor: "Seico Kühlschrank",  standort: "Seico",         art: "wagen", reihenfolge: 21, grenze: 7,   basis: 2.9,  markt: 0.6, abfahrt: [6, 35], rueck: [14, 40] },
+  { sensor: "Borco Neu Theke",    standort: "Borco Neu",     art: "wagen", reihenfolge: 30, grenze: 7,   basis: 3.4,  markt: 1.5, abfahrt: [6, 20], rueck: [15, 5] },
+  { sensor: "Borco Neu Kühlschrank", standort: "Borco Neu",  art: "wagen", reihenfolge: 31, grenze: 7,   basis: 3.0,  markt: 0.5, abfahrt: [6, 20], rueck: [15, 5] },
+  { sensor: "Borco Neu Tiefkühler", standort: "Borco Neu",   art: "wagen", reihenfolge: 32, grenze: -18, basis: -20.4, markt: 0.6, abfahrt: [6, 20], rueck: [15, 5], tot: new Date(2026, 9, 19, 15, 10) },
+  { sensor: "Borco Alt Theke",    standort: "Borco Alt",     art: "wagen", reihenfolge: 40, grenze: 7,   basis: 3.8,  markt: 1.6, abfahrt: [6, 50], rueck: [15, 20] },
+  { sensor: "Borco Alt Kühlschrank", standort: "Borco Alt",  art: "wagen", reihenfolge: 41, grenze: 7,   basis: 3.2,  markt: 0.7, abfahrt: [6, 50], rueck: [15, 20], ereignis: true },
+  { sensor: "Ruuvi_75BD",         standort: null,            art: "fest",  reihenfolge: 9999, grenze: 7, basis: 3.9 }
+];
+
+const SZENARIEN = {
+  allesok:  { jetzt: new Date(2026, 9, 20, 19, 30), stand: null,                           ohneStoerung: true },
+  mittag:   { jetzt: new Date(2026, 9, 20, 12, 20), stand: null,                           tuerJetzt: true, marktAlarm: true },
+  alarm:    { jetzt: new Date(2026, 9, 20, 12, 20), stand: null,                           alarm: true },
+  abends:   { jetzt: new Date(2026, 9, 20, 18, 40), stand: null },
+  ohnenetz: { jetzt: new Date(2026, 9, 20, 12, 20), stand: new Date(2026, 9, 20, 11, 55) },
+  leer:     { jetzt: new Date(2026, 9, 20, 12, 20), stand: null,                           leer: true }
+};
+
+const CACHE = {};
+function erzeuge(szName) {
+  if (CACHE[szName]) return CACHE[szName];
+  const sz = SZENARIEN[szName];
+  if (sz.leer) return (CACHE[szName] = []);
+  const ende = sz.stand || sz.jetzt;
+  const start = AUFZEICHNUNG_SEIT;
+  CACHE[szName] = SENSOREN.map((def, i) => {
+    const r = rng(1000 + i * 97);
+    const punkte = [], tablet = [];   // tablet = liegt nur im Speicher des Sensors (Wagen unterwegs)
+    for (let t = start.getTime(); t <= ende.getTime(); t += 5 * MIN) {
+      const d = new Date(t);
+      if (def.tot && !sz.ohneStoerung && d >= def.tot) break;
+      const h = d.getHours() + d.getMinutes() / 60;
+      const markttag = d.getDay() >= 2 && d.getDay() <= 6;
+      const sommer = (d.getMonth() === 6 || d.getMonth() === 7) ? 1 : d.getMonth() === 8 ? 0.5 : 0;
+      let v = def.basis + Math.sin(t / (41 * MIN)) * 0.25 + (r() - 0.5) * 0.18;
+      let typ = "live", nurAmSensor = false;
+      if (def.art === "wagen" && markttag) {
+        const ab = def.abfahrt[0] + def.abfahrt[1] / 60, an = def.rueck[0] + def.rueck[1] / 60 + ((d.getDay() * 7 + i) % 5 - 2) * 0.08;
+        if (h >= ab && h < an) {
+          // unterwegs: heute vor der Rückkehr keine Werte (Sensor außer Reichweite)
+          const heute = gleicherTag(d, sz.jetzt);
+          const zurueck = new Date(d); zurueck.setHours(def.rueck[0], def.rueck[1], 0, 0);
+          nurAmSensor = heute && ende < zurueck;
+          typ = nurAmSensor ? "tablet" : "nachgetragen";
+          v += def.markt * (1 + sommer * 0.5) * Math.sin(Math.PI * (h - ab) / (an - ab)) + (r() - 0.5) * 0.3;
+          if (sz.marktAlarm && heute && def.sensor === "Seico Theke") {   // heute ab 11:45 Theke zu warm – sieht man nur per Auslesen
+            const m = (h - 11.7) * 60;
+            if (m >= 0) v += Math.min(m * 0.16, 5);
+          }
+          if (def.ereignis && heute && !sz.ohneStoerung) {           // heute 10:50–11:30 Kühlschrank zu warm (Tür offen gelassen)
+            const m = (h - 10.8) * 60;
+            if (m >= 0 && m <= 45) v += Math.sin(Math.PI * m / 45) * 5.6;
+          }
+        }
+      }
+      (def.historie || []).forEach((e) => {
+        if (!gleicherTag(d, e.tag)) return;
+        const m = (h - e.ab) * 60;
+        if (m >= 0 && m <= e.min) v += Math.sin(Math.PI * m / e.min) * e.hub;
+      });
+      if (def.tuer) {                              // Türöffnungen Kühlhaus: kurze Spitzen ~7 °C, 10 Min
+        [7.1, 11.6, 15.4].forEach((k, j) => {
+          const off = (d.getDay() * 13 + j * 7) % 20 / 60;
+          const m = (h - (k + off)) * 60;
+          if (m >= 0 && m < 25) v += def.tuer * Math.exp(-m / 7) * (0.85 + r() * 0.15);
+        });
+      }
+      (nurAmSensor ? tablet : punkte).push({ t: d, v: Math.round(v * 100) / 100, typ });
+    }
+    if (sz.tuerJetzt && def.sensor === "Kühlhaus Tür") {
+      const n = punkte.length; punkte[n - 2].v = 5.9; punkte[n - 1].v = 7.6;
+    }
+    if (sz.alarm && def.sensor === "Kühlhaus hinten") {
+      punkte.forEach((p) => { const m = (p.t - new Date(2026, 9, 20, 11, 40)) / MIN; if (m >= 0) p.v = Math.round((6.1 + m * 0.085 + (Math.sin(m) * 0.08)) * 100) / 100; });
+    }
+    if (sz.alarm && def.sensor === "Kühlhaus Tür") {
+      punkte.forEach((p) => { const m = (p.t - new Date(2026, 9, 20, 11, 40)) / MIN; if (m >= 0) p.v = Math.round((def.basis + 0.6 + m * 0.07) * 100) / 100; });
+    }
+    return {
+      sensor: def.sensor, standort: def.standort || "Ohne Zuordnung", art: def.art, reihenfolge: def.reihenfolge,
+      grenze: def.grenze, grauMin: 15, rotMin: 480, punkte, basisPunkte: punkte, tablet, lokalZeit: null
+    };
+  });
+  return CACHE[szName];
+}
+
+/* ---------- Statuslogik (gleiche Regel wie späterer Alarm) ---------- */
+function laeufe(punkte, grenze) {           // zusammenhängende Strecken über der Grenze (Lücke > 10 Min trennt)
+  const out = []; let akt = null, vor = null;
+  for (const p of punkte) {
+    const luecke = vor && (p.t - vor.t) > 10 * MIN;
+    if (akt && (p.v <= grenze || luecke)) { out.push(akt); akt = null; }
+    if (p.v > grenze) {
+      if (!akt) akt = { von: p.t, bis: p.t, max: p.v };
+      akt.bis = p.t; akt.max = Math.max(akt.max, p.v);
+    }
+    vor = p;
+  }
+  if (akt) out.push(akt);
+  out.forEach((l) => { l.min = (l.bis - l.von) / MIN + 5; });
+  return out;
+}
+function stufeVon(lauf, grenze) {
+  return (lauf.min > REGEL.toleranzMin || lauf.max > grenze + REGEL.sofortUeberGrenze) ? "alarm" : "achtung";
+}
+function status(s, bezug) {
+  const p = s.punkte, last = p[p.length - 1];
+  if (!last) return { stufe: "meldet", text: "Meldet nicht", seit: null };
+  const alter = (bezug - last.t) / MIN;
+  if (alter >= s.rotMin) return { stufe: "meldet", text: "Meldet nicht · seit " + wann(last.t, bezug), last };
+  if (alter >= s.grauMin) return { stufe: "offline", text: "Offline · letzter Wert " + wann(last.t, bezug), last };
+  if (last.v > s.grenze) {
+    const l = laeufe(p.slice(-300), s.grenze).pop();
+    const st = stufeVon(l, s.grenze);
+    const seit = Math.max(5, (bezug - l.von) / MIN);
+    return { stufe: st, text: WORT[st] + " · seit " + dauer(seit) + " über " + grenzText(s.grenze), last };
+  }
+  return { stufe: "ok", text: "OK", last };
+}
+function heuteAlarm(s, bezug) {             // abgeschlossene Alarm-Strecke heute → Hinweiszeile auf der Karte
+  const heute = s.punkte.slice(-300).filter((p) => gleicherTag(p.t, bezug));
+  const l = laeufe(heute, s.grenze).filter((x) => stufeVon(x, s.grenze) === "alarm");
+  const letzte = s.punkte[s.punkte.length - 1];
+  const fertig = l.filter((x) => !(letzte && x.bis.getTime() === letzte.t.getTime()));
+  return fertig.pop() || null;
+}
+
+/* =========================================================================
+   Zustand + Darstellung
+   ========================================================================= */
+const merk = {
+  lies(k, d) { try { const v = localStorage.getItem("sf-temp-" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  schreib(k, v) { try { localStorage.setItem("sf-temp-" + k, JSON.stringify(v)); } catch (e) {} }
+};
+const Z = {
+  szenario: "allesok", ansicht: "hoch", seite: "uebersicht", sensor: null, zeitraum: "6h",
+  eigen: null, fehler: null, filter: null, blatt: null, start: merk.lies("start", null),
+  wagen: merk.lies("wagen", "Seico"), auslesen: null, fehlerEinmal: { "Seico Kühlschrank": true }
+};
+let DATEN = [];
+const geraet = document.getElementById("geraet");
+
+function bezugszeit() { const sz = SZENARIEN[Z.szenario]; return sz.stand || sz.jetzt; }
+function jetztZeit() { return SZENARIEN[Z.szenario].jetzt; }
+
+function spark(s, st, w, h) {
+  const bezug = bezugszeit();
+  const von = new Date(bezug - 6 * 60 * MIN);
+  const pts = s.punkte.slice(-80).filter((p) => p.t >= von);
+  if (pts.length < 2) return "";
+  const lo = Math.min(...pts.map((p) => p.v), s.grenze) - 0.4, hi = Math.max(...pts.map((p) => p.v), s.grenze) + 0.4;
+  const x = (t) => 2 + (t - von) / (bezug - von) * (w - 8), y = (v) => h - 3 - (v - lo) / (hi - lo) * (h - 6);
+  let d = "", vor = null;
+  pts.forEach((p) => { d += ((vor && p.t - vor.t > 10 * MIN) || !vor ? "M" : "L") + x(p.t).toFixed(1) + " " + y(p.v).toFixed(1); vor = p; });
+  const farbe = { ok: "var(--gruen-punkt)", achtung: "var(--achtung-punkt)", alarm: "var(--rot-punkt)" }[st];
+  const e = pts[pts.length - 1];
+  return '<svg class="spark" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+    '<line x1="0" x2="' + w + '" y1="' + y(s.grenze).toFixed(1) + '" y2="' + y(s.grenze).toFixed(1) + '" stroke="var(--rot-punkt)" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>' +
+    '<path d="' + d + '" fill="none" stroke="' + farbe + '" stroke-width="2.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+    '<circle cx="' + x(e.t).toFixed(1) + '" cy="' + y(e.v).toFixed(1) + '" r="3.2" fill="' + farbe + '"/></svg>';
+}
+
+function karte(s, gross) {
+  const bezug = bezugszeit();
+  const st = status(s, bezug);
+  const wert = st.stufe === "meldet" ? (st.last ? '<small class="zuletzt">zuletzt</small> ' + grad(st.last.v) : "kein Wert") : grad(st.last.v);
+  const ha = (st.stufe === "ok" || st.stufe === "offline") ? heuteAlarm(s, bezug) : null;
+  const hinweis = ha ? '<span class="t-hinweis">' + ICON.hinweis + '<span>Heute ' + uhr(ha.von) + "–" + uhr(new Date(ha.bis.getTime() + 5 * MIN)) + " über " + grenzText(s.grenze) + " · max " + grad(ha.max) + "</span></span>" : "";
+  const mitSpark = !gross && (st.stufe === "ok" || st.stufe === "achtung" || st.stufe === "alarm");
+  const tag = gross ? "div" : "button";
+  return '<' + tag + ' class="karte temp st-' + st.stufe + (gross ? " gross" : "") + '"' + (gross ? "" : ' data-sensor="' + s.sensor + '" aria-label="' + s.sensor + ", " + st.text + '"') + '>' +
+    '<span class="t-oben">' + (gross ? "" : '<span class="t-name">' + s.sensor + "</span>") +
+    '<span class="t-zeile"><span class="t-wert">' + wert + "</span>" + (mitSpark ? spark(s, st.stufe, 112, 40) : "") + "</span>" + hinweis + "</span>" +
+    '<span class="status-zeile"><span class="status-text">' + st.text + '</span>' +
+    (s.lokalZeit || gross ? '<span class="t-grenze">' + [s.lokalZeit ? "vom Tablet " + uhr(s.lokalZeit) : "", gross ? "Grenze " + grenzText(s.grenze) : ""].filter(Boolean).join(" · ") + "</span>" : "") + "</span></" + tag + ">";
+}
+
+function gruppiere(daten) {
+  const bezug = bezugszeit();
+  const g = new Map();
+  daten.forEach((s) => { if (!g.has(s.standort)) g.set(s.standort, []); g.get(s.standort).push(s); });
+  const liste = [...g.entries()].map(([name, sensoren]) => {
+    sensoren.forEach((s) => (s._st = status(s, bezug).stufe));
+    sensoren.sort((a, b) => (RANG[a._st] < 3 || RANG[b._st] < 3 ? RANG[a._st] - RANG[b._st] : 0) || a.reihenfolge - b.reihenfolge);
+    const rang = Math.min(...sensoren.map((s) => RANG[s._st]));
+    return { name, sensoren, rang, reihenfolge: Math.min(...sensoren.map((s) => s.reihenfolge)), art: sensoren[0].art };
+  });
+  liste.sort((a, b) => (a.rang < 3 || b.rang < 3 ? Math.min(a.rang, 3) - Math.min(b.rang, 3) : 0) || a.reihenfolge - b.reihenfolge);
+  return liste;
+}
+
+function zaehle(sensoren) {
+  const z = {}; sensoren.forEach((s) => { const k = s._st === "meldet" ? "alarm" : s._st; z[k] = (z[k] || 0) + 1; }); return z;
+}
+
+function kopf() {
+  const sz = SZENARIEN[Z.szenario];
+  const auswahlText = Z.filter || "Alle Standorte";
+  const sync = sz.stand ? '<span class="sync-text">Keine Verbindung</span>' : '<span class="sync-punkt" title="Aktuell" aria-label="Verbunden, Werte aktuell"></span>';
+  let band = "";
+  if (sz.stand) band = '<div class="hinweisband"><span>Keine Verbindung · Werte von <b>' + uhr(sz.stand) + " Uhr</b>, nicht aktuell</span></div>";
+  const lokal = DATEN.filter((x) => x.lokalZeit);
+  if (lokal.length) band += '<div class="hinweisband"><span style="flex:1">Werte vom Tablet ausgelesen um <b>' + uhr(lokal[0].lokalZeit) + '</b> · nicht gespeichert</span><button data-aktion="verwerfen">Verwerfen</button></div>';
+  if (!sz.stand && Z.filter && Z.filter !== Z.start) band += '<div class="hinweisband"><span style="flex:1">Du siehst nur <b>' + Z.filter + '</b></span><button data-aktion="filter-weg">Zurück zu ' + (Z.start || "Alle") + "</button></div>";
+  return '<header class="kopf"><div class="kopf-innen" style="display:flex;flex-direction:column;gap:14px"><div class="kopf-zeile">' +
+    '<button class="auswahl" data-aktion="blatt">' + (Z.filter ? ICON.pin : ICON.therm) + "<span>" + auswahlText + '</span><span class="pfeil">' + ICON.runter + "</span></button>" +
+    '<span class="platzhalter"></span>' + sync +
+    '<button class="icon-knopf" data-aktion="einstellungen" aria-label="Einstellungen">' + ICON.zahnrad + "</button></div>" +
+    (band ? '<div style="display:flex;flex-direction:column">' + band + "</div>" : '<div style="height:0"></div>') + "</div></header>";
+}
+
+function uebersicht() {
+  if (!DATEN.length) {
+    return kopf() + '<main class="liste"><div class="leer">Noch keine Sensoren. Sobald ein Sensor seinen ersten Wert schreibt, erscheint er hier.</div></main>';
+  }
+  let gruppen = gruppiere(DATEN);
+  if (Z.filter) gruppen = gruppen.filter((g) => g.name === Z.filter);
+  let html = kopf() + '<main class="liste">';
+  gruppen.forEach((g) => {
+    const icon = g.art === "wagen" ? ICON.wagen : g.name === "Ohne Zuordnung" ? ICON.frage : ICON.pin;
+    const alleOffline = g.sensoren.every((s) => s._st === "offline");
+    html += '<section class="gruppe-block"><div class="gruppe"><span class="name">' + icon + "<h2>" + g.name + "</h2></span>" +
+      (g.art === "wagen" && alleOffline ? '<span class="zusatz">unterwegs</span>' : "") + "</div>" +
+      '<div class="raster">' + g.sensoren.map((s) => karte(s)).join("") + "</div>" + auslesKnopf(g.name) + "</section>";
+  });
+  return html + "</main>";
+}
+
+/* ---------- Am Wagen auslesen (Simulation des Bluetooth-Ablaufs) ---------- */
+function wagenSensoren(name) { return DATEN.filter((x) => x.standort === name); }
+function auslesKnopf(name) {
+  if (!name || name !== Z.wagen) return "";
+  const ss = wagenSensoren(name);
+  if (!ss.length || ss[0].art !== "wagen") return "";
+  const bezug = bezugszeit();
+  const gelesen = ss.find((x) => x.lokalZeit);
+  const offline = ss.filter((x) => status(x, bezug).stufe !== "ok" && status(x, bezug).stufe !== "achtung" && status(x, bezug).stufe !== "alarm");
+  if (!gelesen && !offline.length) return "";
+  const seit = ss.map((x) => x.basisPunkte[x.basisPunkte.length - 1]).filter(Boolean).map((p) => p.t).sort((a, b) => a - b)[0];
+  return '<button class="auslesen" data-aktion="auslesen" data-gruppe="' + name + '">' + ICON.bluetooth + '<span class="t"><strong>' +
+    (gelesen ? "Nochmal auslesen" : "Am Wagen auslesen") + '</strong><span class="u">' +
+    (gelesen ? "zuletzt ausgelesen " + uhr(gelesen.lokalZeit) : "per Bluetooth · fehlende Werte" + (seit ? " seit " + uhr(seit) : "")) + "</span></span></button>";
+}
+function starteAuslesen(name, nurFehler) {
+  const ss = wagenSensoren(name);
+  const alt = Z.auslesen && Z.auslesen.gruppe === name ? Z.auslesen.zeilen : null;
+  Z.auslesen = { gruppe: name, laeuft: true, zeilen: ss.map((x) => {
+    const vorher = alt && alt.find((z) => z.sensor === x.sensor);
+    return (nurFehler && vorher && vorher.zustand !== "fehler") ? vorher : { sensor: x.sensor, zustand: "wartet", n: 0 };
+  }) };
+  Z.blatt = "auslesen";
+  const reihe = Z.auslesen.zeilen.filter((z) => z.zustand === "wartet");
+  const naechster = () => {
+    const z = reihe.shift();
+    if (!z) { Z.auslesen.laeuft = false; Z.behalteScroll = true; render(); return; }
+    const sensor = DATEN.find((x) => x.sensor === z.sensor);
+    z.zustand = "verbinde"; Z.behalteScroll = true; render();
+    const scheitert = !sensor.tablet.length || Z.fehlerEinmal[z.sensor];
+    setTimeout(() => {
+      if (scheitert) {
+        Z.fehlerEinmal[z.sensor] = false;
+        z.zustand = "fehler"; Z.behalteScroll = true; render(); setTimeout(naechster, 400); return;
+      }
+      z.zustand = "lade"; const ziel = sensor.tablet.length;
+      const schritt = setInterval(() => {
+        z.n = Math.min(ziel, z.n + Math.ceil(ziel / 6)); Z.behalteScroll = true; render();
+        if (z.n >= ziel) {
+          clearInterval(schritt);
+          sensor.punkte = sensor.basisPunkte.concat(sensor.tablet);   // nur im Speicher – Verwerfen/Neuladen löscht es
+          sensor.lokalZeit = jetztZeit();
+          z.zustand = "fertig"; Z.behalteScroll = true; render(); setTimeout(naechster, 300);
+        }
+      }, 220);
+    }, scheitert ? 2200 : 1300);
+  };
+  render(); setTimeout(naechster, 400);
+}
+function verwerfen() { Object.values(CACHE).flat().forEach((x) => { x.punkte = x.basisPunkte; x.lokalZeit = null; }); }
+function blattAuslesen() {
+  const a = Z.auslesen;
+  const text = { wartet: () => "wartet", verbinde: () => "verbinde …", lade: (z) => "lade Werte … " + z.n, fertig: (z) => "fertig · " + z.n + " Werte", fehler: () => "nicht erreichbar" };
+  const fehler = a.zeilen.filter((z) => z.zustand === "fehler").length;
+  return '<div class="blatt-grund"' + (a.laeuft ? "" : ' data-aktion="blatt-zu"') + '><div class="blatt" role="dialog" aria-label="Am Wagen auslesen"><h2>Am Wagen auslesen · ' + a.gruppe + "</h2>" +
+    '<div class="ausles-liste">' + a.zeilen.map((z) => '<div class="ausles-zeile ' + (z.zustand === "verbinde" || z.zustand === "lade" ? "laeuft" : z.zustand) + '"><span class="n">' + z.sensor + '</span><span class="z">' + text[z.zustand](z) + "</span></div>").join("") + "</div>" +
+    (a.laeuft ? '<p class="erklaerung">Tablet in der Nähe des Wagens lassen. Dauert etwa 30 Sekunden pro Sensor.</p>' :
+      (fehler ? '<p class="erklaerung">' + (fehler === 1 ? "Ein Sensor war" : fehler + " Sensoren waren") + " nicht erreichbar. Näher an den Wagen gehen und nochmal versuchen.</p>" +
+        '<button class="knopf-2" data-aktion="auslesen-nochmal">Nochmal versuchen</button>' : '<p class="erklaerung">Die Werte stehen jetzt in der Übersicht – nur auf diesem Tablet und nur bis die App geschlossen wird.</p>') +
+      '<button class="primaer" data-aktion="auslesen-fertig">Fertig</button>') +
+    "</div></div>";
+}
+
+/* ---------- Zeitraum ---------- */
+const SCHNELL = [
+  { id: "6h", wt: "LETZTE", nr: "6 Std" }, { id: "heute", wt: "HEUTE" }, { id: "gestern", wt: "GESTERN" }, { id: "7t", wt: "LETZTE", nr: "7 Tage" }
+];
+function vorlagen() {
+  const j = jetztZeit();
+  const vm = new Date(j.getFullYear(), j.getMonth() - 1, 1);
+  return [
+    { id: "30t", n: "Letzte 30 Tage", z: datum(new Date(j - 30 * TAG)) + " – heute", kurz: "30 Tage" },
+    { id: "letzterMonat", n: "Letzter Monat", z: MONAT[vm.getMonth()] + " " + vm.getFullYear(), kurz: MON[vm.getMonth()] },
+    { id: "3m", n: "Letzte 3 Monate", z: datum(new Date(j.getFullYear(), j.getMonth() - 3, j.getDate())) + " – heute", kurz: "3 Monate" },
+    { id: "diesesJahr", n: "Dieses Jahr", z: "seit 01.01." + j.getFullYear(), kurz: String(j.getFullYear()) },
+    { id: "letztesJahr", n: "Letztes Jahr", z: String(j.getFullYear() - 1), kurz: String(j.getFullYear() - 1) }
+  ];
+}
+function bereich(id) {
+  const j = jetztZeit(), m = mitternacht(j);
+  switch (id) {
+    case "6h": return [new Date(j - 6 * 60 * MIN), j];
+    case "heute": return [m, j];
+    case "gestern": return [new Date(m - TAG), m];
+    case "7t": return [new Date(j - 7 * TAG), j];
+    case "30t": return [new Date(j - 30 * TAG), j];
+    case "letzterMonat": return [new Date(j.getFullYear(), j.getMonth() - 1, 1), new Date(j.getFullYear(), j.getMonth(), 1)];
+    case "3m": return [new Date(j.getFullYear(), j.getMonth() - 3, j.getDate(), j.getHours(), j.getMinutes()), j];
+    case "diesesJahr": return [new Date(j.getFullYear(), 0, 1), j];
+    case "letztesJahr": return [new Date(j.getFullYear() - 1, 0, 1), new Date(j.getFullYear(), 0, 1)];
+    case "eigen": {
+      const bis = new Date(Z.eigen.bis); bis.setDate(bis.getDate() + 1);
+      return [new Date(Z.eigen.von), bis > j ? j : bis];
+    }
+  }
+  return [new Date(j - 6 * 60 * MIN), j];
+}
+function bereichText(id) {
+  const [von, bis] = bereich(id), j = jetztZeit();
+  const bisAnz = bis.getTime() === j.getTime() ? "jetzt" : datumLang(new Date(bis - 1));
+  if (id === "6h" || id === "heute") return "Heute " + uhr(von) + " – " + uhr(bis);
+  if (id === "gestern") return WT[von.getDay()] + " " + datumLang(von);
+  return datumLang(von) + " – " + bisAnz;
+}
+function istLang(von, bis) { return bis - von > 8 * TAG; }
+
+function punkteIm(s, von, bis) {
+  const p = s.punkte;
+  let lo = 0, hi = p.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (p[m].t < von) lo = m + 1; else hi = m; }
+  const out = [];
+  const inklusive = bis.getTime() === jetztZeit().getTime();   // „bis jetzt“ inkl. letztem Wert, sonst bis exklusiv (z. B. Mitternacht)
+  for (let i = lo; i < p.length && (inklusive ? p[i].t <= bis : p[i].t < bis); i++) out.push(p[i]);
+  return out;
+}
+function tageswerte(pts) {
+  const map = new Map();
+  pts.forEach((p) => {
+    const k = isoTag(p.t);
+    let e = map.get(k);
+    if (!e) { e = { tag: mitternacht(p.t), min: p.v, max: p.v, sum: 0, n: 0 }; map.set(k, e); }
+    e.min = Math.min(e.min, p.v); e.max = Math.max(e.max, p.v); e.sum += p.v; e.n++;
+  });
+  return [...map.values()].map((e) => ({ ...e, t: new Date(e.tag.getTime() + TAG / 2), mittel: e.sum / e.n }));
+}
+
+/* ---------- Detail ---------- */
+function detail() {
+  const s = DATEN.find((x) => x.sensor === Z.sensor);
+  const [von, bis] = bereich(Z.zeitraum);
+  const pts = punkteIm(s, von, bis);
+  const j = jetztZeit();
+  const ausSchnell = SCHNELL.some((z) => z.id === Z.zeitraum);
+  const vl = vorlagen().find((v) => v.id === Z.zeitraum);
+  const kacheln = SCHNELL.map((z) => {
+    let nr = z.nr;
+    if (z.id === "heute") nr = j.getDate() + ".";
+    if (z.id === "gestern") nr = new Date(mitternacht(j) - TAG).getDate() + ".";
+    return '<button class="tag' + (Z.zeitraum === z.id ? " aktiv" : "") + '" data-zeitraum="' + z.id + '"><span class="text"><span class="wt">' + z.wt + '</span><span class="nr">' + nr + "</span></span></button>";
+  }).join("") + (() => {
+    let nr = "Mehr" + ICON.runterKlein, lang = false;
+    if (!ausSchnell) {
+      if (vl) nr = vl.kurz;
+      else if (Z.eigen) {
+        const a = new Date(Z.eigen.von), b = new Date(Z.eigen.bis);
+        nr = a.getMonth() === b.getMonth() ? p2(a.getDate()) + ".–" + datum(b) : datum(a) + "–" + datum(b);
+        lang = true;
+      }
+    }
+    return '<button class="tag' + (!ausSchnell ? " aktiv" : "") + '" data-aktion="zeitraum-blatt" aria-haspopup="dialog"><span class="text"><span class="wt">ZEITRAUM</span><span class="nr' + (lang ? " lang" : "") + '">' + nr + "</span></span></button>";
+  })();
+
+  let kz = "", abw = "", chart;
+  if (pts.length) {
+    let mn = pts[0], mx = pts[0], sum = 0;
+    pts.forEach((p) => { if (p.v < mn.v) mn = p; if (p.v > mx.v) mx = p; sum += p.v; });
+    kz = '<div class="kennzahlen">' +
+      '<div class="kennzahl"><span class="k">Tiefst</span><span class="v">' + grad(mn.v) + '</span><span class="z">' + wann(mn.t, j) + "</span></div>" +
+      '<div class="kennzahl"><span class="k">Höchst</span><span class="v">' + grad(mx.v) + '</span><span class="z">' + wann(mx.t, j) + "</span></div>" +
+      '<div class="kennzahl"><span class="k">Mittel</span><span class="v">' + grad(sum / pts.length) + '</span><span class="z">' + pts.length.toLocaleString("de-DE") + " Werte</span></div></div>";
+    abw = abweichungen(s, pts, j);
+    chart = '<div class="diagramm-flaeche" id="diagramm"></div>' + legende(s, istLang(von, bis));
+  } else {
+    const vorStart = bis <= AUFZEICHNUNG_SEIT;
+    chart = '<div class="leer klein">Keine Messwerte in diesem Zeitraum.' + (vorStart ? " Die Aufzeichnung läuft seit " + datumLang(AUFZEICHNUNG_SEIT) + "." : "") + "</div>";
+  }
+  return '<header class="kopf unter"><button class="zurueck" data-aktion="zurueck">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">' + s.sensor + '</h1></header>' +
+    '<main class="detail"><div class="gruppe" style="padding:0"><span class="name">' + (s.art === "wagen" ? ICON.wagen : ICON.pin) + "<h2>" + s.standort + "</h2></span></div>" +
+    '<div class="detail-raster">' +
+    '<div class="b-wert" style="display:flex;flex-direction:column;gap:10px">' + karte(s, true) + auslesKnopf(s.standort) + "</div>" +
+    '<div class="b-zeit"><div class="zeitraum">' + kacheln + '</div><div class="zeitraum-text">' + bereichText(Z.zeitraum) + "</div></div>" +
+    '<section class="abschnitt diagramm b-chart">' + chart + "</section>" +
+    (kz ? '<div class="b-kz">' + kz + "</div>" : "") +
+    (abw ? '<div class="b-abw">' + abw + "</div>" : "") +
+    "</div></main>";
+}
+
+function legende(s, lang) {
+  return '<div class="legende">' + (lang ? '<span><i></i>Tagesmittel</span><span><i class="band"></i>Tiefst–Höchst</span>' : '<span><i></i>Temperatur</span>') +
+    (!lang && s.lokalZeit ? '<span><i class="gestrichelt"></i>vom Tablet, nicht gespeichert</span>' : "") +
+    '<span><i class="rot"></i>über Grenze</span><span><i class="grenze"></i>Grenze ' + grenzText(s.grenze) + '</span><span><i class="luecke"></i>keine Daten</span></div>';
+}
+
+function abweichungen(s, pts, j) {
+  const l = laeufe(pts, s.grenze).reverse();
+  const titel = '<section class="abschnitt"><h2>Über ' + grenzText(s.grenze) + "</h2>";
+  if (!l.length) return titel + '<div class="leer klein">Keine Werte über der Grenze in diesem Zeitraum.</div></section>';
+  const letzte = s.punkte[s.punkte.length - 1];
+  const zeile = (x) => {
+    const st = stufeVon(x, s.grenze);
+    const laufend = x.bis.getTime() === letzte.t.getTime() && (bezugszeit() - x.bis) / MIN < s.grauMin;
+    const tagTxt = gleicherTag(x.von, j) ? "" : (j - x.von < 6 * TAG ? WT[x.von.getDay()] + " " : datum(x.von) + " ");
+    return '<div class="abweichung"><span class="zeit">' + tagTxt + uhr(x.von) + "–" + (laufend ? "jetzt" : uhr(new Date(x.bis.getTime() + 5 * MIN))) + '</span><span class="info">' + dauer(x.min) + " · max " + grad(x.max) + '</span><span class="status-chip ' + st + '">' + WORT[st] + "</span></div>";
+  };
+  const alarme = l.filter((x) => stufeVon(x, s.grenze) === "alarm");
+  const kurz = l.filter((x) => stufeVon(x, s.grenze) === "achtung");
+  // kurze Zeiträume: alles einzeln; lange Zeiträume: Alarme einzeln, kurze Spitzen als eine Zeile
+  if (l.length <= 8) return titel + l.map(zeile).join("") + "</section>";
+  const tage = new Set(kurz.map((x) => isoTag(x.von))).size;
+  return titel + (alarme.length ? alarme.slice(0, 12).map(zeile).join("") : '<div class="leer klein">Kein Alarm in diesem Zeitraum.</div>') +
+    (alarme.length > 12 ? '<div class="mehr-zeile">… und ' + (alarme.length - 12) + " weitere Alarme</div>" : "") +
+    (kurz.length ? '<div class="mehr-zeile">Dazu <b>' + kurz.length + "× kurz über der Grenze</b> (Achtung, je höchstens " + REGEL.toleranzMin + " Min) an " + tage + (tage === 1 ? " Tag" : " Tagen") + "</div>" : "") +
+    "</section>";
+}
+
+function diagramm() {
+  const huelle = document.getElementById("diagramm");
+  if (!huelle) return;
+  const s = DATEN.find((x) => x.sensor === Z.sensor);
+  const [von, bis] = bereich(Z.zeitraum);
+  const roh = punkteIm(s, von, bis);
+  const lang = istLang(von, bis);
+  const pts = lang ? tageswerte(roh) : roh;
+  const W = Math.max(280, huelle.clientWidth), H = Math.round(Math.min(320, Math.max(220, W * 0.5)));
+  const L = 52, R = 12, T = 14, B = 34;
+  const werte = lang ? pts.flatMap((p) => [p.min, p.max]) : pts.map((p) => p.v);
+  werte.push(s.grenze);
+  let lo = Math.floor(Math.min(...werte) - 0.5), hi = Math.ceil(Math.max(...werte) + 0.5);
+  const spanne = hi - lo, schritt = spanne <= 6 ? 1 : spanne <= 12 ? 2 : 5;
+  lo = Math.floor(lo / schritt) * schritt; hi = Math.ceil(hi / schritt) * schritt;
+  const x = (t) => L + (t - von) / (bis - von) * (W - L - R);
+  const y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+  let g = "";
+  for (let v = lo; v <= hi + 1e-9; v += schritt) {
+    g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--diagramm-gitter)" stroke-width="1"/>';
+    g += '<text x="' + (L - 8) + '" y="' + (y(v) + 5) + '" text-anchor="end">' + (v < 0 ? "−" : "") + Math.abs(v) + "°</text>";
+  }
+  // Zeitachse
+  const tageAnz = (bis - von) / TAG;
+  const ticks = [];
+  if (!lang) {
+    const dauerH = (bis - von) / 3600000;
+    const tick = dauerH <= 7 ? 1 : dauerH <= 25 ? (W < 520 ? 6 : 3) : 24;
+    const t0 = new Date(von); t0.setMinutes(0, 0, 0); if (tick === 24) t0.setHours(0); else t0.setHours(Math.ceil(t0.getHours() / tick) * tick);
+    for (let t = t0.getTime(); t <= bis.getTime(); t += tick * 3600000) {
+      if (t < von.getTime()) continue;
+      const d = new Date(t);
+      ticks.push({ t, label: tick === 24 ? WT[d.getDay()] + " " + d.getDate() + "." : p2(d.getHours()) + ":00", links: tick === 24 });
+    }
+  } else if (tageAnz <= 40) {
+    const schrittTage = W < 520 ? 14 : 7;
+    const t0 = mitternacht(von); while (t0.getDay() !== 1) t0.setDate(t0.getDate() + 1);
+    for (let d = t0; d <= bis; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + schrittTage)) ticks.push({ t: d.getTime(), label: datum(d), links: true });
+  } else {
+    const jede = (tageAnz > 200 && W < 700) ? 2 : 1;
+    for (let d = new Date(von.getFullYear(), von.getMonth() + (von.getDate() > 1 ? 1 : 0), 1); d <= bis; d = new Date(d.getFullYear(), d.getMonth() + jede, 1)) ticks.push({ t: d.getTime(), label: MON[d.getMonth()], links: true });
+  }
+  ticks.forEach((k) => {
+    const xx = x(k.t);
+    g += '<line x1="' + xx + '" x2="' + xx + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--diagramm-gitter)" stroke-width="1"/>';
+    if (xx > L + 4 && xx < W - (k.links ? 44 : 24)) g += '<text x="' + (k.links ? xx + 4 : xx) + '" y="' + (H - 10) + '" text-anchor="' + (k.links ? "start" : "middle") + '">' + k.label + "</text>";
+  });
+  // Lücken (keine Daten) schraffiert
+  let luecken = "";
+  const ende = bezugszeit() < bis ? bezugszeit() : bis;
+  const maxLuecke = lang ? 1.5 * TAG : 15 * MIN;
+  let vorT = von;
+  const rand = (t) => (lang ? t - TAG / 2 : t);
+  pts.concat([{ t: ende, ende: true }]).forEach((p) => {
+    const startP = p.ende ? p.t : new Date(rand(p.t.getTime()));
+    if (startP - vorT > (lang ? TAG / 2 : maxLuecke)) {
+      const x1 = x(vorT), x2 = x(startP);
+      luecken += '<rect x="' + x1 + '" y="' + T + '" width="' + Math.max(0, x2 - x1) + '" height="' + (H - T - B) + '" fill="url(#schraffur)"/>';
+      if (x2 - x1 > 110) luecken += '<text class="luecke-label" x="' + ((x1 + x2) / 2) + '" y="' + (T + 26) + '" text-anchor="middle">keine Daten</text>';
+    }
+    if (!p.ende) vorT = lang ? new Date(p.t.getTime() + TAG / 2) : p.t;
+  });
+  const gy = y(s.grenze);
+  let marks = "";
+  if (lang) {
+    // Band Tiefst–Höchst je Tag, Linie Tagesmittel, Höchstwerte über der Grenze rot
+    const segmente = []; let akt = [];
+    pts.forEach((p, i) => { if (i && p.tag - pts[i - 1].tag > TAG * 1.5) { segmente.push(akt); akt = []; } akt.push(p); });
+    if (akt.length) segmente.push(akt);
+    segmente.forEach((sg) => {
+      const oben = sg.map((p) => x(p.t).toFixed(1) + " " + y(p.max).toFixed(1));
+      const unten = sg.slice().reverse().map((p) => x(p.t).toFixed(1) + " " + y(p.min).toFixed(1));
+      const breite = Math.max(2, (W - L - R) / tageAnz * 0.7);
+      if (sg.length === 1) { marks += '<rect x="' + (x(sg[0].t) - breite / 2) + '" y="' + y(sg[0].max) + '" width="' + breite + '" height="' + Math.max(1, y(sg[0].min) - y(sg[0].max)) + '" fill="var(--diagramm-band)"/>'; return; }
+      marks += '<path d="M' + oben.join("L") + "L" + unten.join("L") + 'Z" fill="var(--diagramm-band)"/>';
+      marks += '<path d="M' + oben.join("L") + '" fill="none" stroke="var(--rot-punkt)" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#ueber)"/>';
+      marks += '<path d="M' + sg.map((p) => x(p.t).toFixed(1) + " " + y(p.mittel).toFixed(1)).join("L") + '" fill="none" stroke="var(--diagramm-linie)" stroke-width="2.5" stroke-linejoin="round"/>';
+    });
+  } else {
+    let d = "", dTab = "", vor = null;
+    pts.forEach((p) => {
+      const seg = (!vor || p.t - vor.t > 10 * MIN) ? "M" : "L", xy = x(p.t).toFixed(1) + " " + y(p.v).toFixed(1);
+      if (p.typ === "tablet") dTab += (vor && vor.typ !== "tablet" && seg === "L" ? "M" + x(vor.t).toFixed(1) + " " + y(vor.v).toFixed(1) + "L" : seg) + xy;
+      else d += seg + xy;
+      vor = p;
+    });
+    const letzte = pts[pts.length - 1];
+    const linie = (pfad, strich) => pfad ? '<path d="' + pfad + '" fill="none" stroke="var(--diagramm-linie)" stroke-width="2.5" stroke-linejoin="round"' + strich + ' clip-path="url(#unter)"/>' +
+      '<path d="' + pfad + '" fill="none" stroke="var(--rot-punkt)" stroke-width="3" stroke-linejoin="round"' + strich + ' clip-path="url(#ueber)"/>' : "";
+    marks = linie(d, "") + linie(dTab, ' stroke-dasharray="7 5"') +
+      (letzte ? '<circle cx="' + x(letzte.t) + '" cy="' + y(letzte.v) + '" r="4.5" fill="' + (letzte.v > s.grenze ? "var(--rot-punkt)" : "var(--diagramm-linie)") + '" stroke="var(--flaeche)" stroke-width="2"/>' : "");
+  }
+  const svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Temperaturverlauf ' + s.sensor + '">' +
+    '<defs><pattern id="schraffur" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--flaeche)"/><rect width="4" height="8" fill="var(--schraffur)"/></pattern>' +
+    '<clipPath id="ueber"><rect x="0" y="0" width="' + W + '" height="' + gy + '"/></clipPath><clipPath id="unter"><rect x="0" y="' + gy + '" width="' + W + '" height="' + (H - gy) + '"/></clipPath></defs>' +
+    luecken + g + marks +
+    '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--rot-punkt)" stroke-width="2" stroke-dasharray="7 5"/>' +
+    '<g id="zeiger" visibility="hidden"><line id="zl" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--text)" stroke-width="1.5"/><circle id="zk" r="5.5" fill="var(--text)" stroke="var(--flaeche)" stroke-width="2"/></g>' +
+    "</svg>";
+  huelle.innerHTML = svg + '<div class="blase" id="blase" hidden></div>';
+  const svgEl = huelle.querySelector("svg"), blase = huelle.querySelector("#blase"), zeiger = huelle.querySelector("#zeiger");
+  function zeige(ev) {
+    if (!pts.length) return;
+    const r = svgEl.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (W / r.width);
+    const t = von.getTime() + (px - L) / (W - L - R) * (bis - von);
+    let best = pts[0]; for (const p of pts) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+    if (Math.abs(best.t - t) > (lang ? TAG : 20 * MIN)) { verstecke(); return; }
+    const wert = lang ? best.max : best.v;
+    const bx = x(best.t), by = y(wert);
+    zeiger.setAttribute("visibility", "visible");
+    zeiger.querySelector("#zl").setAttribute("x1", bx); zeiger.querySelector("#zl").setAttribute("x2", bx);
+    zeiger.querySelector("#zk").setAttribute("cx", bx); zeiger.querySelector("#zk").setAttribute("cy", by);
+    blase.hidden = false;
+    blase.textContent = lang ? WT[best.tag.getDay()] + " " + datum(best.tag) + " · max " + grad(best.max) + " · Ø " + zahl(best.mittel)
+                             : ((bis - von) > 1.1 * TAG ? WT[best.t.getDay()] + " " : "") + uhr(best.t) + " · " + grad(best.v);
+    const sx = bx * (r.width / W);
+    blase.style.left = Math.min(r.width - 110, Math.max(110, sx)) + "px";
+    blase.style.top = Math.max(0, by * (r.height / H) - 48) + "px";
+  }
+  function verstecke() { zeiger.setAttribute("visibility", "hidden"); blase.hidden = true; }
+  svgEl.addEventListener("pointermove", zeige);
+  svgEl.addEventListener("pointerdown", zeige);
+  svgEl.addEventListener("pointerleave", verstecke);
+}
+
+/* ---------- Einstellungen ---------- */
+function einstellungen() {
+  const chip = (st) => '<span class="status-chip ' + st + '">' + WORT[st] + "</span>";
+  return '<header class="kopf unter"><button class="zurueck" data-aktion="zurueck">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">Einstellungen</h1></header>' +
+    '<main class="einstellungen">' +
+    '<section class="abschnitt"><h2>Anzeige auf diesem Gerät</h2>' +
+    '<div class="schalter-zeile"><div class="schalter-text"><strong>Tablet gehört zu</strong><span>Nur bei diesem Wagen erscheint „Am Wagen auslesen“</span></div><button class="auswahl" data-aktion="blatt-wagen">' + ICON.wagen + "<span>" + (Z.wagen || "keinem Wagen") + "</span>" + ICON.runter + "</button></div>" +
+    '<div class="schalter-zeile"><div class="schalter-text"><strong>Startansicht</strong><span>Welcher Standort beim Öffnen gezeigt wird</span></div><button class="auswahl" data-aktion="blatt-start">' + ICON.pin + "<span>" + (Z.start || "Alle") + "</span>" + ICON.runter + "</button></div>" +
+    "</section>" +
+    '<section class="abschnitt"><h2>So wird bewertet</h2>' +
+    '<div class="regel">' + chip("ok") + '<span class="t">unter der Grenztemperatur des Sensors</span></div>' +
+    '<div class="regel">' + chip("achtung") + '<span class="t">über der Grenze, aber höchstens ' + REGEL.toleranzMin + " Min – z. B. Tür kurz offen</span></div>" +
+    '<div class="regel">' + chip("alarm") + '<span class="t">länger als ' + REGEL.toleranzMin + " Min über der Grenze oder mehr als " + REGEL.sofortUeberGrenze + " °C darüber</span></div>" +
+    '<div class="regel">' + chip("offline") + '<span class="t">seit 15 Min kein Wert – normal, wenn der Wagen unterwegs ist</span></div>' +
+    '<div class="regel">' + chip("meldet") + '<span class="t">seit 8 Std kein Wert – Sensor prüfen</span></div>' +
+    "</section>" +
+    '<section class="abschnitt"><h2>Info</h2><div class="info-zeile"><b>Daten</b><span>alle 5 Minuten, nur lesen</span></div><div class="info-zeile"><b>Aufzeichnung</b><span>seit ' + datumLang(AUFZEICHNUNG_SEIT) + '</span></div><div class="info-zeile"><b>Version</b><span>0.3 · Vorlage</span></div></section>' +
+    "</main>";
+}
+
+/* ---------- Auswahl-Blätter ---------- */
+function blattStandort() {
+  const gruppen = gruppiere(DATEN).slice().sort((a, b) => a.reihenfolge - b.reihenfolge);
+  const aktuell = Z.blatt === "start" ? Z.start : Z.blatt === "wagen" ? Z.wagen : Z.filter;
+  const zeile = (name, sensoren) => {
+    const z = zaehle(sensoren);
+    const teile = ["alarm", "achtung", "ok", "offline"].filter((k) => z[k]).map((k) => '<span class="mini ' + k + '"><span>' + z[k] + " " + (k === "alarm" ? "Problem" : WORT[k]) + "</span></span>").join("");
+    return '<button class="blatt-zeile' + (aktuell === name ? " aktiv" : "") + '" data-wahl="' + (name || "") + '"><span class="n">' + (name || "Alle Standorte") + '</span><span class="zusammen">' + teile + "</span></button>";
+  };
+  if (Z.blatt === "wagen") {
+    return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Wagen wählen"><h2>Tablet gehört zu</h2>' +
+      gruppen.filter((g) => g.art === "wagen").map((g) => '<button class="blatt-zeile' + (Z.wagen === g.name ? " aktiv" : "") + '" data-wahl="' + g.name + '"><span class="n">' + g.name + "</span></button>").join("") +
+      '<button class="blatt-zeile' + (!Z.wagen ? " aktiv" : "") + '" data-wahl=""><span class="n">Keinem Wagen (Büro, Handy)</span></button></div></div>';
+  }
+  return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Standort wählen"><h2>' + (Z.blatt === "start" ? "Startansicht" : "Standort") + "</h2>" +
+    zeile(null, DATEN) + gruppen.map((g) => zeile(g.name, g.sensoren)).join("") + "</div></div>";
+}
+function blattZeitraum() {
+  const j = jetztZeit();
+  const vonW = Z.eigen ? isoTag(new Date(Z.eigen.von)) : isoTag(new Date(j - 14 * TAG));
+  const bisW = Z.eigen ? isoTag(new Date(Z.eigen.bis)) : isoTag(j);
+  return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Zeitraum wählen"><h2>Zeitraum</h2>' +
+    '<div class="vorlagen">' + vorlagen().map((v) => '<button class="blatt-zeile' + (Z.zeitraum === v.id ? " aktiv" : "") + '" data-vorlage="' + v.id + '"><span class="n">' + v.n + '</span><span class="z">' + v.z + "</span></button>").join("") + "</div>" +
+    "<h3>Eigener Zeitraum</h3>" +
+    '<form id="eigen-form" novalidate><div class="feld-zeile">' +
+    '<div class="feld"><label for="eigen-von">Von</label><input type="date" id="eigen-von" value="' + vonW + '" max="' + isoTag(j) + '"></div>' +
+    '<div class="feld"><label for="eigen-bis">Bis</label><input type="date" id="eigen-bis" value="' + bisW + '" max="' + isoTag(j) + '"></div></div>' +
+    (Z.fehler ? '<p class="fehler-text" role="alert">' + Z.fehler + "</p>" : "") +
+    '<button type="submit" class="primaer">Zeitraum anzeigen</button></form>' +
+    "</div></div>";
+}
+
+/* ---------- Rendern ---------- */
+function render() {
+  DATEN = erzeuge(Z.szenario);
+  if (Z.seite === "detail" && !DATEN.find((s) => s.sensor === Z.sensor)) Z.seite = "uebersicht";
+  geraet.className = "geraet " + Z.ansicht;
+  document.getElementById("buehne").className = "buehne" + (Z.ansicht === "voll" ? " voll" : "");
+  const inhalt = Z.seite === "detail" ? detail() : Z.seite === "einstellungen" ? einstellungen() : uebersicht();
+  const scrollAlt = geraet.querySelector(".scroller");
+  const pos = scrollAlt ? scrollAlt.scrollTop : 0;
+  const blatt = Z.blatt === "zeitraum" ? blattZeitraum() : Z.blatt === "auslesen" && Z.auslesen ? blattAuslesen() : Z.blatt ? blattStandort() : "";
+  geraet.innerHTML = '<div class="app" id="app"><div class="scroller">' + inhalt + "</div>" + blatt + "</div>";
+  groesse();
+  if (Z.behalteScroll) geraet.querySelector(".scroller").scrollTop = pos;
+  Z.behalteScroll = false;
+  diagramm();
+  const form = document.getElementById("eigen-form");
+  if (form) form.addEventListener("submit", eigenerZeitraum);
+  document.querySelectorAll("[data-szenario]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.szenario === Z.szenario));
+  document.querySelectorAll("[data-ansicht]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.ansicht === Z.ansicht));
+}
+function groesse() {
+  const app = document.getElementById("app"); if (!app) return;
+  const w = geraet.clientWidth, h = geraet.clientHeight;
+  app.classList.toggle("quer", Z.ansicht === "quer" || (Z.ansicht === "voll" && w > 860 && w < 1200 && h < w));
+  app.classList.toggle("breit", Z.ansicht === "voll" && w >= 1200);
+  app.classList.toggle("schmal", w < 560);
+}
+function eigenerZeitraum(e) {
+  e.preventDefault();
+  const von = ausIso(document.getElementById("eigen-von").value), bis = ausIso(document.getElementById("eigen-bis").value);
+  const heute = mitternacht(jetztZeit());
+  if (!von || !bis) Z.fehler = "Bitte beide Daten eintragen.";
+  else if (bis < von) Z.fehler = "„Bis“ liegt vor „Von“. Bitte die Daten tauschen.";
+  else if (von > heute) Z.fehler = "„Von“ liegt in der Zukunft.";
+  else {
+    Z.fehler = null; Z.eigen = { von: von.getTime(), bis: Math.min(bis.getTime(), heute.getTime()) };
+    Z.zeitraum = "eigen"; Z.blatt = null;
+  }
+  render();
+}
+let rTimer; window.addEventListener("resize", () => { clearTimeout(rTimer); rTimer = setTimeout(() => { groesse(); diagramm(); }, 120); });
+
+document.getElementById("demo").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.szenario) { Z.szenario = b.dataset.szenario; Z.blatt = null; Z.auslesen = null; verwerfen(); Z.fehlerEinmal = { "Seico Kühlschrank": true }; }
+  if (b.dataset.ansicht) Z.ansicht = b.dataset.ansicht;
+  render();
+});
+geraet.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-aktion],[data-sensor],[data-zeitraum],[data-wahl],[data-vorlage]");
+  if (!el) return;
+  const a = el.dataset.aktion;
+  if (el.dataset.wahl !== undefined) {
+    const w = el.dataset.wahl || null;
+    if (Z.blatt === "start") { Z.start = w; merk.schreib("start", w); Z.filter = w; }
+    else if (Z.blatt === "wagen") { Z.wagen = w; merk.schreib("wagen", w); }
+    else Z.filter = w;
+    Z.blatt = null; render(); return;
+  }
+  if (el.dataset.vorlage) { Z.zeitraum = el.dataset.vorlage; Z.blatt = null; Z.fehler = null; render(); return; }
+  if (a === "blatt-zu") { if (e.target === el) { Z.blatt = null; Z.fehler = null; render(); } return; }
+  if (el.dataset.sensor) { Z.sensor = el.dataset.sensor; Z.seite = "detail"; render(); return; }
+  if (el.dataset.zeitraum) { Z.zeitraum = el.dataset.zeitraum; Z.behalteScroll = true; render(); return; }
+  if (a === "zeitraum-blatt") { Z.blatt = "zeitraum"; Z.behalteScroll = true; }
+  if (a === "blatt") Z.blatt = "filter";
+  if (a === "blatt-start") Z.blatt = "start";
+  if (a === "filter-weg") Z.filter = Z.start;
+  if (a === "blatt-wagen") Z.blatt = "wagen";
+  if (a === "auslesen") { starteAuslesen(el.dataset.gruppe, false); return; }
+  if (a === "auslesen-nochmal") { starteAuslesen(Z.auslesen.gruppe, true); return; }
+  if (a === "auslesen-fertig") { Z.blatt = null; Z.auslesen = null; Z.behalteScroll = true; }
+  if (a === "verwerfen") { verwerfen(); Z.behalteScroll = true; }
+  if (a === "einstellungen") Z.seite = "einstellungen";
+  if (a === "zurueck") Z.seite = "uebersicht";
+  render();
+});
+
+/* Start: URL-Parameter für Screenshots (?ansicht=quer&szenario=alarm&seite=detail&sensor=…&zeitraum=30t&clean=1) */
+(function start() {
+  let q; try { q = new URLSearchParams(location.search); } catch (e) { q = new URLSearchParams(); }
+  if (q.get("szenario") && SZENARIEN[q.get("szenario")]) Z.szenario = q.get("szenario");
+  if (q.get("ansicht")) Z.ansicht = q.get("ansicht");
+  else if (window.innerWidth < 700) Z.ansicht = "voll";
+  if (q.get("seite")) Z.seite = q.get("seite");
+  if (q.get("sensor")) Z.sensor = q.get("sensor");
+  if (q.get("zeitraum")) Z.zeitraum = q.get("zeitraum");
+  if (q.get("von") && q.get("bis")) { Z.eigen = { von: ausIso(q.get("von")).getTime(), bis: ausIso(q.get("bis")).getTime() }; Z.zeitraum = "eigen"; }
+  if (q.get("filter")) Z.filter = q.get("filter");
+  if (q.get("blatt")) Z.blatt = q.get("blatt");
+  if (q.get("clean")) document.body.classList.add("nur-clean");
+  Z.filter = Z.filter || Z.start;
+  render();
+})();
+</script>
+</body>
+</html>
