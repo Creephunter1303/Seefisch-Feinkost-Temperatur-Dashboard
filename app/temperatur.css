@@ -287,3 +287,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 /* ---------- Smartphone: kein Mini-Verlauf auf den Karten (zu klein, Wert + Status reichen) ---------- */
 .app.schmal .karte.temp .spark { display: none; }
 
+/* ---------- Am Wagen auslesen (Bluetooth, Werte nur im Arbeitsspeicher) ---------- */
+.auslesen { width: 100%; min-height: 64px; border-radius: var(--radius-knopf); background: var(--sekundaer); color: var(--sekundaer-text); box-shadow: inset 0 0 0 1.5px #C5CED8; display: flex; align-items: center; gap: 12px; padding: 8px 16px; text-align: left; font: inherit; }
+.auslesen svg { flex-shrink: 0; color: var(--blau); }
+.auslesen .t { display: flex; flex-direction: column; min-width: 0; }
+.auslesen strong { font-size: 19px; font-weight: 600; color: var(--text); }
+.auslesen .u { font-size: 16px; color: var(--text-3); }
+.raster > .auslesen { grid-column: 1 / -1; }
+.b-wert { display: flex; flex-direction: column; gap: 10px; }
+.ausles-liste { display: flex; flex-direction: column; gap: 8px; }
+.ausles-zeile { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-radius: var(--radius-knopf); background: var(--kachel); flex-wrap: wrap; }
+.ausles-zeile .n { flex: 1; font-size: 19px; font-weight: 600; color: var(--text-2); min-width: 0; }
+.ausles-zeile .z { font-size: 17px; font-weight: 600; }
+.ausles-zeile .knopf-2.inline { min-height: 48px; margin: 0; }
+.ausles-zeile.wartet .z, .ausles-zeile.koppeln .z { color: var(--text-3); font-weight: 500; }
+.ausles-zeile.laeuft { background: var(--blau-feld); box-shadow: inset 0 0 0 2px var(--blau-rahmen); }
+.ausles-zeile.laeuft .z { color: var(--blau); }
+.ausles-zeile.fertig { background: var(--gruen-flaeche); box-shadow: inset 0 0 0 1.5px var(--gruen-rand); }
+.ausles-zeile.fertig .z { color: var(--gruen-text); }
+.ausles-zeile.fehler { background: var(--rot-flaeche); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.ausles-zeile.fehler .z { color: var(--rot-text); }
+.blatt .erklaerung { margin: 4px 0; }
+.blatt .knopf-2 { margin-top: 8px; }
+.legende i.gestrichelt { border-top: 3px dashed var(--diagramm-linie); }
+

@@ -1,11 +1,12 @@
 // Übersicht: Kopf mit Standortwahl + Sync, Standort-Gruppen mit Statuskarten.
-// Aufbau, Klassen und Texte wie vorlage/index.html (v0.3), ohne „Am Wagen auslesen“.
+// Aufbau, Klassen und Texte wie vorlage/index.html (v0.3), inkl. „Am Wagen auslesen“.
 
 import { ICON } from '../icons.js';
 import { Z, esc, gruppeVon, istWagen, OHNE_ZUORDNUNG } from '../zustand.js';
 import { D, aktive, punkteVon, bezug } from '../daten.js';
 import { status, heuteAlarm, RANG, WORT, grad, grenzText } from '../status.js';
 import { STD, MIN, uhr } from '../zeit.js';
+import { knopfAuslesen } from './auslesen.js';
 
 export function statusVon(s, b = bezug()) { return status(s, punkteVon(s.mac), b, D.letzter.get(s.mac), D.fensterAb); }
 
@@ -36,7 +37,9 @@ export function karte(s, gross) {
   const hinweis = ha ? '<span class="t-hinweis">' + ICON.hinweis + '<span>Heute ' + uhr(ha.von) + '–' + uhr(ha.bis + 5 * MIN) + ' über ' + grenzText(s.grenze) + ' · max ' + grad(ha.max) + '</span></span>' : '';
   const mitSpark = !gross && ['ok', 'achtung', 'alarm', 'ohne'].includes(st.stufe);
   const tag = gross ? 'div' : 'button';
-  const rechts = gross ? (s.grenze === null ? 'keine Grenze' : 'Grenze ' + grenzText(s.grenze)) : '';
+  // Wert per Bluetooth am Wagen ausgelesen (nicht gespeichert) → rechts kennzeichnen
+  const vomTablet = st.last && st.last.tab ? 'ausgelesen ' + uhr(st.last.t) : '';
+  const rechts = gross ? (vomTablet ? vomTablet + ' · ' : '') + (s.grenze === null ? 'keine Grenze' : 'Grenze ' + grenzText(s.grenze)) : vomTablet;
   return '<' + tag + ' class="karte temp st-' + st.stufe + (gross ? ' gross' : '') + '"' +
     (gross ? '' : ' data-sensor="' + esc(s.mac) + '" aria-label="' + esc(s.name + ', ' + st.text) + '"') + '>' +
     '<span class="t-oben">' + (gross ? '' : '<span class="t-name">' + esc(s.name) + '</span>') +
@@ -79,6 +82,7 @@ export function kopf() {
   let band = '';
   if (netzWeg && D.stand) band += '<div class="hinweisband"><span>Keine Verbindung · Werte von <b>' + uhr(D.stand) + ' Uhr</b>, nicht aktuell</span></div>';
   if (fehler && D.stand) band += '<div class="hinweisband"><span style="flex:1">Werte können gerade nicht geladen werden · Stand <b>' + uhr(D.stand) + ' Uhr</b></span><button data-aktion="neu-laden">Nochmal</button></div>';
+  if (D.tabletUm) band += '<div class="hinweisband"><span style="flex:1">Werte am Wagen ausgelesen um <b>' + uhr(D.tabletUm) + '</b> · nicht gespeichert</span><button data-aktion="tablet-weg">Verwerfen</button></div>';
   if (!D.fehler && Z.filter && Z.filter !== Z.start) band += '<div class="hinweisband"><span style="flex:1">Du siehst nur <b>' + esc(Z.filter) + '</b></span><button data-aktion="filter-weg">Zurück zu ' + esc(Z.start || 'Alle') + '</button></div>';
   return '<header class="kopf"><div class="kopf-innen"><div class="kopf-zeile">' +
     '<button class="auswahl" data-aktion="blatt">' + (Z.filter ? ICON.pin : ICON.therm) + '<span>' + esc(Z.filter || 'Alle Standorte') + '</span><span class="pfeil">' + ICON.runter + '</span></button>' +
@@ -111,7 +115,7 @@ export function uebersicht() {
     const alleOffline = g.sensoren.every((s) => s._st === 'offline');
     html += '<section class="gruppe-block"><div class="gruppe"><span class="name">' + gruppenIcon(g) + '<h2>' + esc(g.name) + '</h2></span>' +
       (g.wagen && alleOffline ? '<span class="zusatz">unterwegs</span>' : '') + '</div>' +
-      '<div class="raster">' + g.sensoren.map((s) => karte(s)).join('') + '</div></section>';
+      '<div class="raster">' + g.sensoren.map((s) => karte(s)).join('') + (g.wagen ? knopfAuslesen(g.name) : '') + '</div></section>';
   }
   return html + '</main>';
 }
@@ -126,9 +130,9 @@ export function blattStandort() {
     return '<button class="blatt-zeile' + (aktuell === name ? ' aktiv' : '') + '" data-wahl="' + esc(name || '') + '"><span class="n">' + esc(name || 'Alle Standorte') + '</span><span class="zusammen">' + teile + '</span></button>';
   };
   if (Z.blatt === 'wagen') {
-    return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Wagen wählen"><h2>Tablet gehört zu</h2>' +
+    return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Wagen wählen"><h2>Gerät gehört zu</h2>' +
       gruppen.filter((g) => g.wagen).map((g) => '<button class="blatt-zeile' + (Z.wagen === g.name ? ' aktiv' : '') + '" data-wahl="' + esc(g.name) + '"><span class="n">' + esc(g.name) + '</span></button>').join('') +
-      '<button class="blatt-zeile' + (!Z.wagen ? ' aktiv' : '') + '" data-wahl=""><span class="n">Keinem Wagen (Büro, Handy)</span></button></div></div>';
+      '<button class="blatt-zeile' + (!Z.wagen ? ' aktiv' : '') + '" data-wahl=""><span class="n">Keinem Wagen (Büro, Laptop)</span></button></div></div>';
   }
   return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Standort wählen"><h2>' + (Z.blatt === 'start' ? 'Startansicht' : 'Standort') + '</h2>' +
     zeile(null, aktive()) + gruppen.map((g) => zeile(g.name, g.sensoren)).join('') + '</div></div>';

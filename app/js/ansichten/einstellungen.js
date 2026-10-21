@@ -8,6 +8,7 @@ import { dauer, datumLang, uhr } from '../zeit.js';
 import { konfig, verbrauch } from '../rest.js';
 import { APP_VERSION } from '../version.js';
 import { adminAngemeldet } from './admin-status.js';
+import { bluetoothDa } from '../bluetooth.js';
 
 function spanneText(werte) {
   const u = [...new Set(werte)].sort((a, b) => a - b);
@@ -35,7 +36,9 @@ export function einstellungen() {
     '<main class="einstellungen">' +
     (Z.meldung ? '<div class="meldung ' + Z.meldung.art + '">' + esc(Z.meldung.text) + '</div>' : '') +
     '<section class="abschnitt"><h2>Anzeige auf diesem Gerät</h2>' +
-    '<div class="schalter-zeile"><div class="schalter-text"><strong>Tablet gehört zu</strong><span>Für „Am Wagen auslesen“ – kommt mit einem späteren Update</span></div><button class="auswahl" data-aktion="blatt-wagen">' + ICON.wagen + '<span>' + esc(Z.wagen || 'keinem Wagen') + '</span>' + ICON.runter + '</button></div>' +
+    (bluetoothDa()
+      ? '<div class="schalter-zeile"><div class="schalter-text"><strong>Gerät gehört zu</strong><span>Nur bei diesem Wagen erscheint „Am Wagen auslesen“. Laptop und Büro-PC: keinem Wagen.</span></div><button class="auswahl" data-aktion="blatt-wagen">' + ICON.wagen + '<span>' + esc(Z.wagen || 'keinem Wagen') + '</span>' + ICON.runter + '</button></div>'
+      : '<div class="schalter-zeile"><div class="schalter-text"><strong>Am Wagen auslesen</strong><span>Geht auf diesem Gerät nicht – Bluetooth gibt es nur in Chrome (Android-Tablet, Windows, Mac), nicht auf iPhone/iPad.</span></div></div>') +
     '<div class="schalter-zeile"><div class="schalter-text"><strong>Startansicht</strong><span>Welcher Standort beim Öffnen gezeigt wird</span></div><button class="auswahl" data-aktion="blatt-start">' + ICON.pin + '<span>' + esc(Z.start || 'Alle') + '</span>' + ICON.runter + '</button></div>' +
     '</section>' +
     '<section class="abschnitt"><h2>So wird bewertet</h2>' +

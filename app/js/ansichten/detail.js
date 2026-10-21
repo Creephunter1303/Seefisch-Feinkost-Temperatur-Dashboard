@@ -6,6 +6,7 @@ import { Z, esc, gruppeVon, istWagen, OHNE_ZUORDNUNG } from '../zustand.js';
 import { D, aktive, sensorVon, bezug } from '../daten.js';
 import { laeufe, stufeVon, REGEL, WORT, grad, zahl, grenzText } from '../status.js';
 import { karte } from './uebersicht.js';
+import { knopfAuslesen } from './auslesen.js';
 import {
   MIN, STD, TAG, SCHNELL, vorlagen, bereich, bereichText, istLang, eigenKurz,
   teile, mitternacht, tagesBeginn, tagKey, uhr, datum, datumLang, wochentag, wann, dauer, gleicherTag, MON,
@@ -15,7 +16,7 @@ export const jetztZeit = () => bezug();
 
 // Neu laden, wenn Sensor oder Zeitraum wechseln oder neue Daten da sind
 export function verlaufKey() {
-  return Z.sensor + '|' + Z.zeitraum + '|' + (Z.eigen ? Z.eigen.von + Z.eigen.bis : '') + '|' + D.stand;
+  return Z.sensor + '|' + Z.zeitraum + '|' + (Z.eigen ? Z.eigen.von + Z.eigen.bis : '') + '|' + D.stand + '|' + (D.tabletUm || '');
 }
 
 function kacheln(j) {
@@ -57,7 +58,7 @@ export function detail() {
       '<div class="kennzahl"><span class="k">Höchst</span><span class="v">' + grad(mx.v) + '</span><span class="z">' + wann(mx.t, j) + '</span></div>' +
       '<div class="kennzahl"><span class="k">Mittel</span><span class="v">' + grad(sum / pts.length) + '</span><span class="z">' + pts.length.toLocaleString('de-DE') + ' Werte</span></div></div>';
     abw = abweichungen(s, pts, j);
-    chart = '<div class="diagramm-flaeche" id="diagramm"></div>' + legende(s, istLang(von, bis));
+    chart = '<div class="diagramm-flaeche" id="diagramm"></div>' + legende(s, istLang(von, bis), pts.some((p) => p.tab));
   } else {
     const vorStart = D.seit && bis <= D.seit;
     chart = '<div class="leer klein">Keine Messwerte in diesem Zeitraum.' + (vorStart || D.seit ? ' Die Aufzeichnung läuft seit ' + datumLang(D.seit) + '.' : '') + '</div>';
@@ -67,7 +68,7 @@ export function detail() {
   return '<header class="kopf unter"><button class="zurueck" data-aktion="zurueck">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">' + esc(s.name) + '</h1></header>' +
     '<main class="detail"><div class="gruppe" style="padding:0"><span class="name">' + icon + '<h2>' + esc(s.standort || OHNE_ZUORDNUNG) + '</h2></span>' + (s.aktiv ? '' : '<span class="zusatz">ausgemustert</span>') + '</div>' +
     '<div class="detail-raster">' +
-    '<div class="b-wert">' + karte(s, true) + '</div>' +
+    '<div class="b-wert">' + karte(s, true) + knopfAuslesen(gruppeVon(s)) + '</div>' +
     '<div class="b-zeit"><div class="zeitraum">' + kacheln(j) + '</div><div class="zeitraum-text">' + bereichText(Z.zeitraum, j, Z.eigen) + '</div></div>' +
     '<section class="abschnitt diagramm b-chart">' + chart + '</section>' +
     (kz ? '<div class="b-kz">' + kz + '</div>' : '') +
@@ -75,9 +76,10 @@ export function detail() {
     '</div></main>';
 }
 
-function legende(s, lang) {
+function legende(s, lang, tab) {
   const g = s.grenze !== null;
   return '<div class="legende">' + (lang ? '<span><i></i>Tagesmittel</span><span><i class="band"></i>Tiefst–Höchst</span>' : '<span><i></i>Temperatur</span>') +
+    (tab && !lang ? '<span><i class="gestrichelt"></i>am Wagen ausgelesen, nicht gespeichert</span>' : '') +
     (g ? '<span><i class="rot"></i>über Grenze</span><span><i class="grenze"></i>Grenze ' + grenzText(s.grenze) + '</span>' : '') +
     '<span><i class="luecke"></i>keine Daten</span></div>';
 }
@@ -214,11 +216,18 @@ export function diagramm() {
       marks += '<path d="M' + sg.map((p) => x(p.t).toFixed(1) + ' ' + y(p.mittel).toFixed(1)).join('L') + '" fill="none" stroke="var(--diagramm-linie)" stroke-width="2.5" stroke-linejoin="round"/>';
     }
   } else {
-    let d = '', vor = null;
-    for (const p of pts) { d += ((!vor || p.t - vor.t > 10 * MIN) ? 'M' : 'L') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); vor = p; }
+    // d = Werte aus Supabase (durchgezogen), dt = am Wagen ausgelesen (gestrichelt, nicht gespeichert)
+    let d = '', dt = '', vor = null;
+    for (const p of pts) {
+      const neu = (!vor || p.t - vor.t > 10 * MIN) ? 'M' : 'L', xy = x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1);
+      if (p.tab) dt += (vor && !vor.tab && neu === 'L' ? 'M' + x(vor.t).toFixed(1) + ' ' + y(vor.v).toFixed(1) + 'L' : neu) + xy;
+      else d += neu + xy;
+      vor = p;
+    }
     const letzte = pts[pts.length - 1];
-    marks = '<path d="' + d + '" fill="none" stroke="var(--diagramm-linie)" stroke-width="2.5" stroke-linejoin="round"' + (hatGrenze ? ' clip-path="url(#unter)"' : '') + '/>' +
-      (hatGrenze ? '<path d="' + d + '" fill="none" stroke="var(--rot-punkt)" stroke-width="3" stroke-linejoin="round" clip-path="url(#ueber)"/>' : '') +
+    const linie = (pfad, extra) => '<path d="' + pfad + '" fill="none" stroke="var(--diagramm-linie)" stroke-width="2.5" stroke-linejoin="round"' + extra + (hatGrenze ? ' clip-path="url(#unter)"' : '') + '/>' +
+      (hatGrenze ? '<path d="' + pfad + '" fill="none" stroke="var(--rot-punkt)" stroke-width="3" stroke-linejoin="round"' + extra + ' clip-path="url(#ueber)"/>' : '');
+    marks = (d ? linie(d, '') : '') + (dt ? linie(dt, ' stroke-dasharray="7 5"') : '') +
       (letzte ? '<circle cx="' + x(letzte.t) + '" cy="' + y(letzte.v) + '" r="4.5" fill="' + (hatGrenze && letzte.v > s.grenze ? 'var(--rot-punkt)' : 'var(--diagramm-linie)') + '" stroke="var(--flaeche)" stroke-width="2"/>' : '');
   }
   const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Temperaturverlauf ' + esc(s.name) + '">' +

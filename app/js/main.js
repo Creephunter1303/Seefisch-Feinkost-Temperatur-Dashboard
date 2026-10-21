@@ -3,10 +3,11 @@
 
 import { Z } from './zustand.js';
 import { merk } from './speicher.js';
-import { D, aktualisieren, beiAenderung, ladeGespeichert, ladeVerlauf, sensorVon, vergessen } from './daten.js';
+import { D, aktualisieren, beiAenderung, ladeGespeichert, ladeVerlauf, sensorVon, vergessen, tabletVerwerfen } from './daten.js';
 import { konfig, konfigSpeichern, normalisiereUrl, keyIstGeheim, zaehle } from './rest.js';
 import { uebersicht, blattStandort } from './ansichten/uebersicht.js';
 import { detail, diagramm, blattZeitraum, eigenPruefen, verlaufKey, jetztZeit } from './ansichten/detail.js';
+import { A, blattAuslesen, beiAuslesen, starte as auslesenStarten, koppelnUndLesen, schliessen as auslesenSchliessen } from './ansichten/auslesen.js';
 import { einstellungen, einrichtung } from './ansichten/einstellungen.js';
 import { bereich } from './zeit.js';
 
@@ -93,7 +94,7 @@ function geteilt() {
 
 function render() {
   const inhalt = seitenInhalt();
-  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt ? blattStandort() : '';
+  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt === 'auslesen' ? (A.gruppe ? blattAuslesen() : '') : Z.blatt ? blattStandort() : '';
   app.innerHTML = '<div id="seite">' + inhalt + '</div><div id="blatt-platz">' + blatt + '</div>';
   document.body.classList.toggle('blatt-offen', !!blatt);
   diagramm();
@@ -193,7 +194,7 @@ app.addEventListener('click', async (e) => {
     Z.blatt = null; render(); return;
   }
   if (el.dataset.vorlage) { Z.zeitraum = el.dataset.vorlage; Z.blatt = null; Z.zeitraumFehler = null; render(); return; }
-  if (a === 'blatt-zu') { if (e.target === el) { Z.blatt = null; Z.zeitraumFehler = null; render(); } return; }
+  if (a === 'blatt-zu') { if (e.target === el) { if (Z.blatt === 'auslesen') auslesenSchliessen(); Z.blatt = null; Z.zeitraumFehler = null; render(); } return; }
   if (el.dataset.sensor && !a) {
     Z.sensor = el.dataset.sensor; Z.verlauf = null;
     if (Z.layout.geteilt) { Z.seite = 'detail'; render(); return; }   // Übersicht bleibt stehen, rechts wechselt der Verlauf
@@ -211,6 +212,12 @@ app.addEventListener('click', async (e) => {
     case 'einrichtung': einrichtungForm = null; seite('einrichtung'); return;
     case 'neu-laden': aktualisieren({ voll: !D.stand }); return;
     case 'verlauf-neu': Z.verlauf = null; break;
+    // Am Wagen auslesen (Bluetooth, nur Arbeitsspeicher)
+    case 'auslesen': auslesenStarten(el.dataset.gruppe, false); return;
+    case 'auslesen-nochmal': auslesenStarten(A.gruppe, true); return;
+    case 'auslesen-koppeln': koppelnUndLesen(el.dataset.mac); return;
+    case 'auslesen-fertig': Z.blatt = null; auslesenSchliessen(); break;
+    case 'tablet-weg': tabletVerwerfen(); Z.verlauf = null; break;
     case 'link-kopieren': {
       const link = einrichtungsLink();
       try { await navigator.clipboard.writeText(link); Z.meldung = { art: 'info', text: 'Einrichtungslink kopiert. Auf dem anderen Gerät einmal öffnen, dann ist es eingerichtet. Der Link enthält den Schlüssel – nur an eigene Geräte geben.' }; }
@@ -254,6 +261,7 @@ window.addEventListener('online', () => { if (konfig()) aktualisieren(); });
 let rTimer;
 window.addEventListener('resize', () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const alt = JSON.stringify(Z.layout); layout(); if (JSON.stringify(Z.layout) !== alt) { if (Z.seite === 'detail' || Z.seite.startsWith('admin') || alt.includes('"geteilt":' + !Z.layout.geteilt)) render(); else diagramm(); } }, 150); });
 beiAenderung(nachDaten);
+beiAuslesen(() => { if (Z.blatt === 'auslesen') render(); else nachDaten(); });
 
 // ---------- Service Worker (App-Dateien + Schriften offline) ----------
 // Lokal beim Entwickeln nur mit ?sw=1, sonst liefert der Zwischenspeicher alte Dateien.

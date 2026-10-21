@@ -28,6 +28,8 @@ export const D = {
   frisch: false,         // in dieser Sitzung schon erfolgreich geladen?
   laedt: false,
   fehler: null,          // RestFehler der letzten Abfrage
+  tablet: new Map(),     // mac → [{ t, v, tab: true }] am Wagen per Bluetooth ausgelesen – NIE gespeichert
+  tabletUm: null,        // wann ausgelesen (für Kennzeichnung und Neuzeichnen)
 };
 
 let melde = () => {};
@@ -44,7 +46,23 @@ export function sensorAus(z) {
 
 export const aktive = () => D.sensoren.filter((s) => s.aktiv);
 export const sensorVon = (mac) => D.sensoren.find((s) => s.mac === mac) || null;
-export const punkteVon = (mac) => D.punkte.get(mac) || [];
+// Werte vom Tablet zählen nur NACH dem letzten Wert aus Supabase. Sobald der
+// Pi die echten Werte nachgetragen hat, fallen sie dadurch von selbst weg.
+export const punkteVon = (mac) => {
+  const p = D.punkte.get(mac) || [];
+  const tb = D.tablet.get(mac);
+  if (!tb) return p;
+  const l = D.letzter.get(mac);
+  const ab = Math.max(p.length ? p[p.length - 1].t : -Infinity, l ? l.t : -Infinity);
+  const extra = tb.filter((x) => x.t > ab);
+  return extra.length ? p.concat(extra) : p;
+};
+
+export function tabletSetzen(mac, werte) {
+  D.tablet.set(mac, werte.map((w) => ({ t: w.t, v: w.v, tab: true })).sort((a, b) => a.t - b.t));
+  D.tabletUm = Date.now();
+}
+export function tabletVerwerfen() { D.tablet = new Map(); D.tabletUm = null; }
 
 // Bezugszeit für den Status: ohne frische Daten zählt der Datenstand.
 export function bezug() { return D.frisch && !(D.fehler && D.fehler.art === 'netz') ? Date.now() : (D.stand || Date.now()); }
@@ -63,7 +81,7 @@ function einsortieren(zeilen) {
     neu.get(z.uuid).push(p);
   }
   for (const [mac, liste] of neu) {
-    const map = new Map(punkteVon(mac).map((p) => [p.t, p]));
+    const map = new Map((D.punkte.get(mac) || []).map((p) => [p.t, p]));
     for (const p of liste) map.set(p.t, p);   // gleicher Zeitpunkt = Korrektur, neuer gewinnt
     const sortiert = [...map.values()].sort((a, b) => a.t - b.t);
     D.punkte.set(mac, sortiert);
@@ -103,7 +121,7 @@ async function ladeFenster() {
     macs.length * ((jetzt - D.fensterAb) / (5 * MIN) + 1));
   einsortieren(zeilen);
   // Sensoren ohne Wert im Fenster: nur den letzten Wert holen (eine kleine Abfrage je Sensor)
-  await Promise.all(macs.filter((m) => !punkteVon(m).length).map(async (m) => {
+  await Promise.all(macs.filter((m) => !(D.punkte.get(m) || []).length).map(async (m) => {
     const z = await anfrage('messwerte?select=zeit,temperatur_c&uuid=eq.' + enc(m) + '&order=zeit.desc&limit=1');
     if (z.length) D.letzter.set(m, punktAus(z[0]));
   }));
@@ -167,6 +185,7 @@ export async function ladeGespeichert() {
 }
 
 export function vergessen() {
+  tabletVerwerfen();
   Object.assign(D, { sensoren: [], punkte: new Map(), letzter: new Map(), maxEing: null, fensterAb: 0, stand: null, seit: null, frisch: false, fehler: null });
   ablegen(SNAPSHOT, null);
 }

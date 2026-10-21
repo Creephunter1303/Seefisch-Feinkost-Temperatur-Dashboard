@@ -8,9 +8,9 @@ export const Z = {
   eigen: null,             // { von: 'YYYY-MM-DD', bis: 'YYYY-MM-DD' }
   zeitraumFehler: null,
   filter: null,            // gewählter Standort (null = alle)
-  blatt: null,             // filter | start | wagen | zeitraum
+  blatt: null,             // filter | start | wagen | zeitraum | auslesen
   start: merk.lies('start', null),     // Startansicht dieses Geräts
-  wagen: merk.lies('wagen', null),     // „Tablet gehört zu“ (wirksam ab Phase 2)
+  wagen: merk.lies('wagen', null),     // „Tablet gehört zu“: nur dort erscheint „Am Wagen auslesen“
   verlauf: null,           // { key, punkte, laedt, fehler, n }
   meldung: null,           // kurze Rückmeldung oben auf einer Seite
   layout: { schmal: false, quer: false, breit: false, breite: 0 },
