@@ -228,6 +228,11 @@ export async function ladeVerlauf(mac, von, bis, jetzt, fortschritt) {
 // nachgetragene Werte), davor gilt der einmal geholte Verlauf.
 function mitFenster(punkte, mac, von, bis) {
   const ab = D.stand && D.punkte.has(mac) ? D.fensterAb : Infinity;
-  return punkte.filter((p) => p.t < ab).concat(punkteVon(mac).filter((p) => p.t >= Math.max(ab, von) && p.t <= bis));
+  const roh = punkte.filter((p) => p.t < ab).concat(punkteVon(mac).filter((p) => p.t >= Math.max(ab, von) && p.t <= bis));
+  if (ab < Infinity) return roh;
+  // Sensor war im ganzen Fenster still (Wagen lange unterwegs): am Wagen ausgelesene Werte trotzdem anhängen
+  const letzter = roh.length ? roh[roh.length - 1].t : -Infinity;
+  const tb = (D.tablet.get(mac) || []).filter((p) => p.t > letzter && p.t >= von && p.t <= bis);
+  return tb.length ? roh.concat(tb) : roh;
 }
 

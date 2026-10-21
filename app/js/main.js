@@ -73,7 +73,7 @@ function seitenInhalt() {
   }
 }
 
-// Großer Bildschirm (≥ 1700 px): Übersicht und Verlauf nebeneinander. Ohne Auswahl
+// Großer Bildschirm (ab 1200 px): Übersicht und Verlauf nebeneinander. Ohne Auswahl
 // zeigt rechts der wichtigste Sensor (erste Karte = Alarm/Problem zuerst).
 function geteilt() {
   if (!Z.sensor || !sensorVon(Z.sensor) || !sensorVon(Z.sensor).aktiv) {
@@ -301,7 +301,7 @@ window.addEventListener('load', () => setTimeout(() => {
   const q = new URLSearchParams(location.search);
   Z.filter = Z.start;
   if (q.get('filter')) Z.filter = q.get('filter');
-  if (q.get('zeitraum')) Z.zeitraum = q.get('zeitraum');
+  if (q.get('zeitraum') && q.get('zeitraum') !== 'auswahl') Z.zeitraum = q.get('zeitraum');   // Ausschnitt nur durch Ziehen
   if (q.get('von') && q.get('bis')) { Z.eigen = { von: q.get('von'), bis: q.get('bis') }; Z.zeitraum = 'eigen'; }
   if (!konfig()) { Z.seite = 'einrichtung'; render(); return; }
   render();

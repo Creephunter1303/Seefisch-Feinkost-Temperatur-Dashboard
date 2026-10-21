@@ -174,7 +174,8 @@ export async function speichern(werte) {
 const infoKnopf = '<button class="icon-knopf info-knopf" data-aktion="admin-info" aria-label="Regeln für Sensoren">' + ICON.info + '</button>';
 const kopf = (titel, aktion, info) => '<header class="kopf unter"><button class="zurueck" data-aktion="' + aktion + '">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">' + titel + '</h1>' + (info ? infoKnopf : '') + '</header>';
 
-// Info-Blatt: die Regeln für Sensoren (ergibt sich aus den Prüfungen in dieser Datei und in der Datenbank)
+// Info-Blatt: die Regeln für Sensoren (Prüfungen in dieser Datei und in der Datenbank,
+// abgeglichen mit ruuvi-haccp/PLAN-STAMMDATEN.md Abschnitte 4, 5, 6.2 und 9)
 export function infoBlatt() {
   return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt regeln" role="dialog" aria-label="Regeln für Sensoren"><h2>Regeln für Sensoren</h2>' +
     '<h3>Grundsätze</h3><ul>' +
@@ -183,15 +184,15 @@ export function infoBlatt() {
     '<li><b>Ein Name nur einmal im Einsatz.</b> Zwei aktive Sensoren dürfen nicht gleich heißen (höchstens 40 Zeichen).</li></ul>' +
     '<h3>Sensor ersetzen (z. B. defekt)</h3><ol>' +
     '<li>Den alten Sensor öffnen, <b>„Im Einsatz“ ausschalten</b>, speichern. Erst dann ist sein Name wieder frei.</li>' +
-    '<li><b>Neuer Sensor</b> mit der neuen MAC-Adresse anlegen. Name, Standort, Grenze, Reihenfolge und Zeiten vom alten übernehmen.</li>' +
-    '<li>Die Karte steht zuerst auf „Meldet nicht · noch kein Wert“, bis der erste Wert angekommen ist (bis etwa ' + PI_TAKT_MIN + ' Minuten).</li>' +
+    '<li><b>Neuer Sensor</b> mit der neuen MAC-Adresse anlegen. Name, Standort, Grenze und Zeiten vom alten übernehmen.</li>' +
+    '<li>Die Karte steht zuerst auf „Meldet nicht · noch kein Wert“. Werte kommen, sobald der Pi den neuen Sensor übernommen hat (spätestens ' + PI_TAKT_MIN + ' Minuten nach dem Speichern, dann die nächste Messrunde).</li>' +
     '<li>Der alte Verlauf bleibt beim ausgemusterten Sensor, der neue Verlauf beginnt bei null. Beide sind nicht zusammengelegt.</li></ol>' +
     '<h3>Neuen Sensor hinzufügen</h3><ul>' +
     '<li>MAC-Adresse bereithalten (AA:BB:CC:DD:EE:FF, auch ohne Doppelpunkte möglich).</li>' +
     '<li>Standort = Überschrift der Gruppe. Ein Wagen heißt so wie sein Standort. Bei Wagen „Meldet nicht nach“ auf mindestens ' + WAGEN_AB_MIN + ' Minuten lassen, sonst zählt der Standort nicht als Wagen („unterwegs“).</li></ul>' +
-    '<h3>Sensor wegnehmen (nicht ersetzt)</h3><ul><li>„Im Einsatz“ ausschalten. Die Karte verschwindet, der Verlauf bleibt. Wieder einschalten geht, solange der Name frei ist.</li></ul>' +
+    '<h3>Sensor wegnehmen (nicht ersetzt)</h3><ul><li>„Im Einsatz“ ausschalten. Die Karte verschwindet, der Verlauf bleibt, der Pi zeichnet ihn nicht mehr auf. Wieder einschalten geht, solange der Name frei ist.</li></ul>' +
     '<h3>Gut zu wissen</h3><ul>' +
-    '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten, sobald dort die Übernahme aus der Datenbank eingeschaltet ist.</li>' +
+    '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten, sobald dort die Übernahme aus der Datenbank eingeschaltet ist. Bis dahin misst er nur die Sensoren, die er schon kennt – ein neuer Sensor bekommt dann noch keine Werte.</li>' +
     '<li>Unter „Änderungen“ steht, wer wann was geändert hat.</li></ul>' +
     '<button class="primaer" data-aktion="info-zu">Verstanden</button></div></div>';
 }
