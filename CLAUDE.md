@@ -7,7 +7,9 @@ Stabile Fakten für KI-Assistenten. Immer zuerst lesen. Bedienung/Einrichtung: `
 PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der RuuviTag-Sensoren
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
-(noch nicht gebaut, siehe `vorlage/VORLAGE.md` „Neu in v0.3“ und `vorlage/PROMPT-Claude-Code.md`).
+(gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.0** (UI aus der
+Spielwiese übernommen, 21.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -26,6 +28,10 @@ Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** 
 - Anzeige = nur lesen. Geschrieben wird **ausschließlich** im Admin-Bereich nach Anmeldung, und
   nur in die Tabelle `sensoren` (insert/update, nie delete, MAC nach dem Anlegen unveränderlich).
   Nie an `messwerte` schreiben.
+- Am Wagen per Bluetooth ausgelesene Werte liegen **nur im Arbeitsspeicher** (`D.tablet`): nie in
+  IndexedDB, nie hochladen. `punkteVon()` hängt sie nur nach dem letzten Supabase-Wert an, damit sie
+  wegfallen, sobald der Pi die echten Werte nachgetragen hat. Im Code `D.punkte` direkt lesen, wo
+  gespeichert oder abgeglichen wird (`einsortieren`, `ladeFenster`, `speichereStand`).
 - `seefisch.css` + `schriften/` sind unveränderte Kopien aus `../Seefisch Designsystem/`.
   App-Regeln nur in `app/temperatur.css`.
 - `vorlage/` ist die verbindliche Gestaltungsvorlage. Abweichungen in `vergleich/ABWEICHUNGEN.md`
@@ -95,6 +101,30 @@ hinterlegt“ (nie still OK).
 - Einrichtungslink: `…/#einrichtung=<base64url({"u":url,"k":key})>`, wird nach dem Lesen aus der
   Adresszeile entfernt.
 
+## Entscheidungen (Spielwiese, mit Max, 21.10.2026 → v0.2.0)
+
+- **„Meldet nicht“ dunkelrot** (`--meldet`, Statuszeile gefüllt), damit es nicht wie „Alarm“ aussieht.
+- **Ab 1200 px geteilte Ansicht** (`L.geteilt`): links Übersicht, rechts Verlauf. Ohne Auswahl der
+  wichtigste Sensor (Alarm > Meldet nicht > Achtung > OK > Offline). Smartphone: kompakte Karten
+  ohne Mini-Verlauf.
+- **„Am Wagen auslesen“**: Knopf nur, wenn der Browser Bluetooth kann **und** „Gerät gehört zu“ =
+  dieser Wagen **und** dessen Sensoren offline/„meldet nicht“ sind (oder schon ausgelesen). Kein
+  Erkennen per Bildschirmgröße. Koppeln über den Bluetooth-Namen „Ruuvi “ + letzte 4 Zeichen der MAC
+  (Android zeigt Webseiten keine MAC).
+- **Ausschnitt im Diagramm ziehen: Standard AUS** (`sf-temp-ausschnitt`), Schalter pro Gerät. Auf
+  dem Handy verhinderte das Ziehen das Wischen über das Diagramm.
+- **Admin-Knopf in der Kopfzeile erscheint automatisch**, sobald auf dem Gerät eine Admin-Sitzung
+  gespeichert ist (`adminAngemeldet()`), keine Einstellung. Ab 1200 px Admin auf einer Seite
+  (Liste | Formular | Änderungen).
+- **Feld „Reihenfolge“ entfällt im Admin-Formular.** Die Spalte bleibt; bestehende Werte bleiben beim
+  Speichern erhalten (`speichern()` mischt das Formular in `A.form`), neue Sensoren bekommen 100.
+  Sortiert wird weiter danach (heute: Tiefkühlhaus 10, Bunker BN 20, Rest 100). Wer das ändern will:
+  SQL-Editor oder das Feld wieder einbauen. Nutzer der Spalte außerhalb der App (Stand 21.10.2026):
+  nur `stammdaten_einspielen.py` (Erstbefüllung); Grafana und `export/bericht.html` sortieren nach
+  `sensor_gruppen.reihenfolge` (alte Tabelle), der Collector liest sie nicht.
+- Info-Blatt „Regeln für Sensoren“ (`admin.infoBlatt()`): mit PLAN-STAMMDATEN.md abgeglichen. Bei
+  Änderungen am Pi-Plan mitziehen.
+
 ## Dateien
 
 ```
@@ -105,8 +135,9 @@ app/                     ← wird veröffentlicht
   js/rest.js             PostgREST-Zugriff, Seiten, Bytezähler, Einrichtung (URL/Key)
   js/status.js           Statusregel (REGEL)          js/zeit.js   Europe/Berlin, Zeiträume
   js/zustand.js          UI-Zustand Z, istWagen         js/speicher.js localStorage + IndexedDB
-  js/ansichten/          uebersicht, detail (+ Diagramm, Zeitraum-Blatt), einstellungen
-                         (+ Einrichtung), admin (lazy), admin-status
+  js/bluetooth.js        Ruuvi per Web Bluetooth lesen (NUS, 3A 3A 11), ohne DOM
+  js/ansichten/          uebersicht, detail (+ Diagramm, Ausschnitt, Zeitraum-Blatt), einstellungen
+                         (+ Einrichtung), auslesen (Knopf + Blatt), admin (lazy), admin-status
 tests/                   status.test.mjs, index.html (Browser-Läufer)
 werkzeuge/screenshots.py echte Screenshots via Chrome DevTools-Protokoll
 vergleich/               index.html (Vorlage ↔ App), echt/*.png, ABWEICHUNGEN.md
@@ -129,13 +160,18 @@ vorlage/, bluetooth-test/  Gestaltungsvorlage + Machbarkeitstest Phase 2 (nicht 
 - Nach jedem neuen Datenstand zeichnet `nachDaten()` nur die Seite neu (`#seite`), nie in ein offenes
   Zeitraum-Blatt oder Formular hinein.
 - „°C“ immer mit geschütztem Leerzeichen (`grad()`, `grenzText()`), sonst bricht „7 / °C“ um.
-- Node ist auf Max' Mac (Stand 20.10.2026) nicht installiert → Tests im Browser laufen lassen.
+- Node ist auf Max' Mac (Stand 20.10.2026) nicht installiert → Tests im Browser laufen lassen, oder
+  mit der JavaScript-Engine von macOS: `/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc -m app/js/main.js`
+  prüft den ganzen Modulbaum (gut = endet mit „Can't find variable: document“).
+- Headless-Chrome stürzt beim echten `navigator.bluetooth`-Aufruf ab (kein Adapter). Bluetooth im
+  Test per `Page.addScriptToEvaluateOnNewDocument` nachbauen.
 
 ## Offen
 
-- **Admin-Login testen**, sobald das Pi-Projekt das Konto angelegt hat (Phase 4): Anmelden, Sensor
-  ändern, neuer Sensor, Protokoll, Fehlermeldungen (doppelter Name, MAC-Format) echt prüfen.
-- Phase 2 „Am Wagen auslesen“ (nach dem Bluetooth-Test auf dem Tablet).
+- **Admin-Speichern echt testen** (Max, angemeldet): Notiz eines Sensors ändern und zurück, breite
+  Maske ab 1200 px, Fehlermeldungen (doppelter Name, MAC-Format).
+- **„Am Wagen auslesen“ am Tablet am Wagen testen**: Koppeln per Name „Ruuvi XXXX“, Lesen, gemerkte
+  Geräte beim zweiten Mal (`getDevices`), Dauer je Sensor.
 - Alarmierung/Benachrichtigung (Max, später).
 - Optional ans Pi-Projekt: Spalte `art` in `sensoren` statt der 240-Min-Regel; `eingetragen_am` in
   `messwerte_benannt`.

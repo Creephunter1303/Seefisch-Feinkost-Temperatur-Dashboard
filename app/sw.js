@@ -5,7 +5,7 @@
 // Bei jeder Änderung an der App VERSION erhöhen (und APP_VERSION in js/version.js),
 // sonst bekommen die Tablets die neue Version nicht.
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const CACHE = 'seefisch-temperaturen-' + VERSION;
 
 const DATEIEN = [
@@ -32,11 +32,13 @@ const DATEIEN = [
   './js/zeit.js',
   './js/status.js',
   './js/icons.js',
+  './js/bluetooth.js',
   './js/ansichten/uebersicht.js',
   './js/ansichten/detail.js',
   './js/ansichten/einstellungen.js',
   './js/ansichten/admin-status.js',
   './js/ansichten/admin.js',
+  './js/ansichten/auslesen.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -56,17 +56,34 @@ startet die App ohne Adressleiste und funktioniert auch ohne Netz (zeigt dann de
 
 **Einstellungen** (Zahnrad oben rechts):
 - **Startansicht:** welcher Standort beim Öffnen gezeigt wird (z. B. der eigene Wagen).
-- **Tablet gehört zu:** der eigene Wagen. Wird erst mit „Am Wagen auslesen“ (Phase 2) wirksam.
+- **Gerät gehört zu:** der eigene Wagen. Nur dort erscheint „Am Wagen auslesen“. Laptop und
+  Büro-PC bleiben auf „keinem Wagen“. Geht nur in Chrome mit Bluetooth (Android-Tablet, Windows,
+  Mac), nicht auf iPhone/iPad.
+- **Ausschnitt im Diagramm markieren:** im Diagramm waagerecht ziehen vergrößert den Bereich.
+  Standard aus, sinnvoll nur am Laptop/Computer (stört auf Handy und Tablet beim Wischen).
 
-Beides gilt nur für dieses Gerät.
+Alles gilt nur für dieses Gerät.
+
+### 5. Am Wagen auslesen (Bluetooth)
+
+Ist der Wagen unterwegs und meldet sich nicht, erscheint unter seinen Karten **„Am Wagen auslesen“**.
+Das Tablet holt die fehlenden Werte direkt aus den Sensoren (etwa 30 s je Sensor). Beim ersten Mal
+fragt Chrome je Sensor einmal nach („Koppeln“, dann „Ruuvi XXXX“ wählen). Die Werte stehen
+gestrichelt im Verlauf, gelten **nur auf diesem Gerät** und werden **nicht gespeichert**. Die
+echten Werte trägt der Pi wie bisher nach, wenn der Wagen zurück ist.
 
 ## Admin-Bereich (Sensoren verwalten)
 
 **Einstellungen → Admin-Bereich → Öffnen.** Nach der Anmeldung (E-Mail + Passwort, Supabase-Konto)
-lassen sich Namen, Standort, Grenztemperatur, „Offline nach“/„Meldet nicht nach“, Reihenfolge und
-Notiz ändern, neue Sensoren anlegen (mit MAC-Adresse) und alte ausmustern. Unten steht das
-Änderungsprotokoll. Gelöscht wird nie.
+lassen sich Namen, Standort, Grenztemperatur, „Offline nach“/„Meldet nicht nach“ und Notiz
+ändern, neue Sensoren anlegen (mit MAC-Adresse) und alte ausmustern. Unten steht das
+Änderungsprotokoll. Gelöscht wird nie. Das **ⓘ** oben rechts erklärt die Regeln (z. B. Sensor
+ersetzen).
 
+- Nach der ersten Anmeldung steht auf diesem Gerät oben in der Kopfzeile ein Knopf **„Admin“**
+  (nach „Abmelden“ wieder weg).
+- Ab 1200 px Breite (Laptop/Monitor) liegen Liste, Formular und Änderungen auf einer Seite.
+- Die Reihenfolge der Sensoren ist im Formular nicht mehr einstellbar; vorhandene Werte bleiben.
 - Das Anmeldekonto legt das Pi-Projekt an (PLAN-STAMMDATEN.md, Phase 4).
 - Die Anzeige übernimmt Änderungen sofort. Der Pi übernimmt sie nach ≤ 10 Min, sobald dort die
   Übernahme aus Supabase eingeschaltet ist (Phase 3).

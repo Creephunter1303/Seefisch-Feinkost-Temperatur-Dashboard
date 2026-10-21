@@ -1,6 +1,6 @@
 # Abweichungen App ↔ Vorlage v0.3
 
-Stand 20.10.2026, App-Version 0.1.0. Bilder nebeneinander: `vergleich/index.html` (links
+Stand 21.10.2026, App-Version 0.2.0 (Bilder in `echt/` noch von 0.1.0). Bilder nebeneinander: `vergleich/index.html` (links
 `vorlage/screens/`, rechts `vergleich/echt/`, erzeugt mit `python3 werkzeuge/screenshots.py`
 aus echten Supabase-Daten).
 
@@ -12,9 +12,9 @@ aus echten Supabase-Daten).
 | 2 | Karten | „Alarm · seit 25 Min über 7 °C“ | „Alarm · seit mind. 21 Std über 7 °C“ | Die App lädt für die Übersicht nur ab Mitternacht bzw. die letzten 6 Std (Datenvolumen). Beginnt die Strecke am Anfang dieser Daten, kann sie länger sein – dann „mind.“. |
 | 3 | Karten hoch/Handy | Statuszeile einzeilig | lange Texte brechen in 2–3 Zeilen um | Folge von 2. Inhalt geht nicht verloren, Karten werden etwas höher. „7 °C“ bricht nie auseinander. |
 | 4 | Gruppe „unterwegs“, Wagen-Symbol | Spalte `art` ('wagen'/'fest') | ein Standort gilt als Wagen, wenn **alle** seine Sensoren „Meldet nicht“ erst nach ≥ 240 Min haben (Wagen heute 480, Halle 60) | `sensoren` hat keine Spalte `art`, das Schema ändert nur das Pi-Projekt. Einstellbar im Admin-Bereich je Sensor. |
-| 5 | „Am Wagen auslesen“ | Knopf, Blatt, gestrichelte Werte | fehlt | Phase 2 laut Auftrag. „Tablet gehört zu“ ist schon da, Erklärtext: „kommt mit einem späteren Update“. |
+| 5 | „Am Wagen auslesen“ | Knopf, Blatt, gestrichelte Werte | seit v0.2.0 da; „Tablet gehört zu“ heißt „Gerät gehört zu“, Option „Keinem Wagen (Büro, Laptop)“; ohne Bluetooth (iPhone/iPad, Firefox) nur ein Hinweis | Spielwiese 21.10.2026. Knopf auch in der Detailansicht unter der Wertkarte. |
 | 6 | Einstellungen → So wird bewertet | „seit 15 Min“ / „seit 8 Std“ fest | aus den Sensoren berechnet: „seit 15 Min“, „seit 1 bis 8 Std (je nach Sensor)“ | Halle hat 60 Min, Wagen 480 Min. |
-| 7 | Einstellungen → Info | Daten, Aufzeichnung, Version „0.3 · Vorlage“ | dazu: Zuletzt geladen, Daten diesen Monat (ca. MB), Verbindung (Projekt), Knöpfe „Einrichtungslink kopieren“, „Einrichtung ändern“; Version 0.1.0 | Auftrag (Datenzähler, Einrichtung pro Gerät). |
+| 7 | Einstellungen → Info | Daten, Aufzeichnung, Version „0.3 · Vorlage“ | dazu: Zuletzt geladen, Daten diesen Monat (ca. MB), Verbindung (Projekt), Knöpfe „Einrichtungslink kopieren“, „Einrichtung ändern“; Version 0.2.0 | Auftrag (Datenzähler, Einrichtung pro Gerät). |
 | 8 | Einstellungen | – | neuer Abschnitt „Admin-Bereich · Sensoren verwalten“ | Auftrag (Max, 20.10.2026). |
 | 9 | Admin-Bereich | – | Anmelden, Liste „Im Einsatz“/„Ausgemustert“, Bearbeiten/Neuer Sensor, „Änderungen“ (Protokoll) | keine Vorlage, frei gestaltet nach Designsystem; einziger dunkelblauer Knopf je Seite: „Anmelden“, „Neuer Sensor“ bzw. „Speichern“. |
 | 10 | Zeitraum-Blatt | Datumsfelder im US-Format (Test-Browser) | TT.MM.JJJJ | wie in VORLAGE.md vorhergesagt (Gerätesprache). |
@@ -25,6 +25,11 @@ aus echten Supabase-Daten).
 | 15 | Sonderzustände | „Lädt“ und „Fehler“ nicht im Prototyp | „Lädt die Werte …“ (Dreher), „Keine Verbindung …“, „Zugang abgelehnt … Einrichtung öffnen“, Fehlerband mit „Nochmal“ | gestaltet wie die Bestell-App (Dreher, rote Meldungsfläche). |
 | 16 | Zeitraum-Kacheln | Beschriftung „LETZTE/HEUTE“ 15 px (seefisch.css) | 16 px | Auftrag: Text ≥ 16 px. Nur in temperatur.css überschrieben. |
 | 17 | Startseite ohne Einrichtung | – | Seite „Einrichtung“ (Projekt-URL + Schlüssel) | Auftrag, wie `export/bericht.html`. |
+| 18 | „Meldet nicht“ | rot wie Alarm | dunkelrot, Statuszeile gefüllt, weiße Schrift (Karte und Chip) | Spielwiese 21.10.2026: nicht mit Alarm verwechseln. |
+| 19 | PC/Laptop ab 1200 px | Raster mit großen Karten, Detail als eigene Seite | geteilt: links kompakte Übersicht, rechts Verlauf des gewählten bzw. wichtigsten Sensors | Spielwiese 21.10.2026. |
+| 20 | Smartphone | Karten mit Mini-Verlauf | kompakter, ohne Mini-Verlauf | Spielwiese 21.10.2026: zu klein, Wert + Status reichen. |
+| 21 | Diagramm | Tippen zeigt Wert | zusätzlich abschaltbar: waagerecht ziehen = Ausschnitt (Standard aus), Kachel „Ausschnitt“, Knopf „Ganzer Zeitraum“ | Spielwiese 21.10.2026. |
+| 22 | Kopfzeile | Standort, Sync, Zahnrad | nach Admin-Anmeldung zusätzlich Knopf „Admin“ (Handy: nur Symbol) | Spielwiese 21.10.2026. |
 
 ## Zufällig anders (nur auf den Bildern)
 
