@@ -8,7 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.1** (21.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.2** (21.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -134,6 +134,10 @@ hinterlegt“ (nie still OK).
   Kurze Spitzen mind. 12 px breit. Auf dem Handy scrollt das Diagramm ins Bild. Das Diagramm selbst
   bleibt unverändert. Gilt auch auf Touch – falls es dort stört, hinter den Schalter „Ausschnitt“ legen.
 - **Admin breit: „Änderungen“ dezent** (ohne Karte, graue Schrift `--protokoll-text`), wird selten gelesen.
+- **v0.2.2:** Kacheln der Übersicht zeigen einen heutigen (beendeten) Alarm nur als rotes „!“ hinter dem
+  Namen (`.t-merker`, Text im `title`/`aria-label`), damit alle Kacheln gleich hoch bleiben. Der ganze Satz
+  steht nur noch auf der großen Karte im Detail. **Abmelden im Admin braucht einen zweiten Klick**
+  („Wirklich abmelden?“, `A.abmeldenFragen`).
 
 ## Dateien
 

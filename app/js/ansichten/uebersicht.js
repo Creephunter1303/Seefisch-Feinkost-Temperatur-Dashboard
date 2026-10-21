@@ -35,15 +35,18 @@ export function karte(s, gross) {
   const st = statusVon(s, b);
   const wert = st.stufe === 'meldet' ? (st.last ? '<small class="zuletzt">zuletzt</small> ' + grad(st.last.v) : 'kein Wert') : grad(st.last.v);
   const ha = (st.stufe === 'ok' || st.stufe === 'offline') ? heuteAlarm(s, punkteVon(s.mac), b) : null;
-  const hinweis = ha ? '<span class="t-hinweis">' + ICON.hinweis + '<span>Heute ' + uhr(ha.von) + '–' + uhr(ha.bis + 5 * MIN) + ' über ' + grenzText(s.grenze) + ' · max ' + grad(ha.max) + '</span></span>' : '';
+  const haText = ha ? 'Heute ' + uhr(ha.von) + '–' + uhr(ha.bis + 5 * MIN) + ' über ' + grenzText(s.grenze) + ' · max ' + grad(ha.max) : '';
+  // Detail: ganzer Satz. Kachel: nur ein „!“ hinter dem Namen, damit alle Kacheln gleich hoch bleiben
+  const hinweis = ha && gross ? '<span class="t-hinweis">' + ICON.hinweis + '<span>' + haText + '</span></span>' : '';
+  const merker = ha && !gross ? '<span class="t-merker" title="' + haText + '" aria-hidden="true">!</span>' : '';
   const mitSpark = !gross && ['ok', 'achtung', 'alarm', 'ohne'].includes(st.stufe);
   const tag = gross ? 'div' : 'button';
   // Wert per Bluetooth am Wagen ausgelesen (nicht gespeichert) → rechts kennzeichnen
   const vomTablet = st.last && st.last.tab ? 'ausgelesen ' + uhr(st.last.t) : '';
   const rechts = gross ? (vomTablet ? vomTablet + ' · ' : '') + (s.grenze === null ? 'keine Grenze' : 'Grenze ' + grenzText(s.grenze)) : vomTablet;
   return '<' + tag + ' class="karte temp st-' + st.stufe + (gross ? ' gross' : '') + '"' +
-    (gross ? '' : ' data-sensor="' + esc(s.mac) + '" aria-label="' + esc(s.name + ', ' + st.text) + '"') + '>' +
-    '<span class="t-oben">' + (gross ? '' : '<span class="t-name">' + esc(s.name) + '</span>') +
+    (gross ? '' : ' data-sensor="' + esc(s.mac) + '" aria-label="' + esc(s.name + ', ' + st.text + (ha ? ', ' + haText : '')) + '"') + '>' +
+    '<span class="t-oben">' + (gross ? '' : '<span class="t-name">' + esc(s.name) + merker + '</span>') +
     '<span class="t-zeile"><span class="t-wert">' + wert + '</span>' + (mitSpark ? spark(s, st.stufe, 112, 40) : '') + '</span>' + hinweis + '</span>' +
     '<span class="status-zeile"><span class="status-text">' + st.text + '</span>' +
     (rechts ? '<span class="t-grenze">' + rechts + '</span>' : '') + '</span></' + tag + '>';

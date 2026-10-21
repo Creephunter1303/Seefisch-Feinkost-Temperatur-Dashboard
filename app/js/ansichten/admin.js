@@ -23,6 +23,7 @@ const A = {
   protokoll: null, protokollFehler: null,
   form: null,          // Bearbeiten/Anlegen: { neu, mac, name, standort, … }
   formFehler: null, speichert: false,
+  abmeldenFragen: false,   // „Abmelden“ braucht einen zweiten Klick
 };
 
 let neuZeichnen = () => {};
@@ -132,7 +133,7 @@ export async function anmelden(email, passwort) {
 
 export async function abmelden() {
   try { await (await client()).auth.signOut(); } catch (e) { /* lokal trotzdem weg */ }
-  A.email = null; A.protokoll = null; A.meldung = null; Z.seite = 'admin'; neuZeichnen();
+  A.email = null; A.protokoll = null; A.meldung = null; A.abmeldenFragen = false; Z.seite = 'admin'; neuZeichnen();
 }
 
 export function bearbeiten(mac) {
@@ -223,6 +224,15 @@ function protokollZeile(e) {
   return '<div class="abweichung protokoll"><span class="zeit">' + wann(Date.parse(e.zeit), Date.now()) + '</span><span class="info"><b>' + esc(name) + '</b> · ' + esc(was) + '<br>' + esc(e.wer) + '</span></div>';
 }
 
+function angemeldetHtml() {
+  return '<section class="abschnitt"><div class="angemeldet"><span>Angemeldet als <b>' + esc(A.email) + '</b></span>' +
+    (A.abmeldenFragen
+      ? '<span class="abmelden-frage">Wirklich abmelden?</span><button class="knopf-2" data-aktion="admin-abmelden-nein">Abbrechen</button><button class="knopf-2 rot" data-aktion="admin-abmelden-ja">Abmelden</button>'
+      : '<button class="knopf-2" data-aktion="admin-abmelden">Abmelden</button>') +
+    '</div></section>';
+}
+export function abmeldenFragen(ja) { A.abmeldenFragen = ja; neuZeichnen(); }
+
 function protokollHtml() {
   return '<section class="abschnitt"><h2>Änderungen</h2>' +
     (A.protokollFehler ? '<p class="fehler-text">' + esc(A.protokollFehler) + '</p>'
@@ -236,7 +246,7 @@ function protokollHtml() {
 // rechts bzw. darunter die Änderungen. Kein Seitenwechsel beim Bearbeiten.
 function adminBreit(aktiv, aus) {
   const liste = '<div class="ab-spalte ab-liste">' +
-    '<section class="abschnitt"><div class="angemeldet"><span>Angemeldet als <b>' + esc(A.email) + '</b></span><button class="knopf-2" data-aktion="admin-abmelden">Abmelden</button></div></section>' +
+    angemeldetHtml() +
     '<section class="abschnitt"><h2>Im Einsatz · ' + aktiv.length + '</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
     '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
     (aus.length ? '<section class="abschnitt"><h2>Ausgemustert · ' + aus.length + '</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +
@@ -265,7 +275,7 @@ export function adminSeite() {
   const aktiv = D.sensoren.filter((s) => s.aktiv), aus = D.sensoren.filter((s) => !s.aktiv);
   if (Z.layout.breit) return html.replace('<main class="einstellungen">', '') + adminBreit(aktiv, aus);
   html += (A.meldung ? '<div class="meldung ' + A.meldung.art + '">' + esc(A.meldung.text) + '</div>' : '') +
-    '<section class="abschnitt"><div class="angemeldet"><span>Angemeldet als <b>' + esc(A.email) + '</b></span><button class="knopf-2" data-aktion="admin-abmelden">Abmelden</button></div></section>' +
+    angemeldetHtml() +
     '<section class="abschnitt"><h2>Im Einsatz</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
     '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
     (aus.length ? '<section class="abschnitt"><h2>Ausgemustert</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +

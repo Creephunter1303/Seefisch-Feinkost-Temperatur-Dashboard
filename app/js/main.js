@@ -235,7 +235,9 @@ app.addEventListener('click', async (e) => {
     }
     case 'admin': await adminOeffnen(); return;
     case 'admin-oeffnen': admin.oeffnen(); return;
-    case 'admin-abmelden': admin.abmelden(); return;
+    case 'admin-abmelden': admin.abmeldenFragen(true); return;
+    case 'admin-abmelden-nein': admin.abmeldenFragen(false); return;
+    case 'admin-abmelden-ja': admin.abmelden(); return;
     case 'admin-neu': admin.meldungWeg(); admin.bearbeiten(null); return;
     case 'admin-sensor': admin.meldungWeg(); admin.bearbeiten(el.dataset.mac); return;
     case 'admin-zurueck': admin.zurueckZurListe(); window.scrollTo(0, 0); return;
