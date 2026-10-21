@@ -1,6 +1,6 @@
 # Abweichungen App ↔ Vorlage v0.3
 
-Stand 21.10.2026, App-Version 0.2.0 (Bilder in `echt/` noch von 0.1.0). Bilder nebeneinander: `vergleich/index.html` (links
+Stand 21.10.2026, App-Version 0.2.1 (Bilder in `echt/` noch von 0.1.0). Bilder nebeneinander: `vergleich/index.html` (links
 `vorlage/screens/`, rechts `vergleich/echt/`, erzeugt mit `python3 werkzeuge/screenshots.py`
 aus echten Supabase-Daten).
 
@@ -30,6 +30,8 @@ aus echten Supabase-Daten).
 | 20 | Smartphone | Karten mit Mini-Verlauf | kompakter, ohne Mini-Verlauf | Spielwiese 21.10.2026: zu klein, Wert + Status reichen. |
 | 21 | Diagramm | Tippen zeigt Wert | zusätzlich abschaltbar: waagerecht ziehen = Ausschnitt (Standard aus), Kachel „Ausschnitt“, Knopf „Ganzer Zeitraum“ | Spielwiese 21.10.2026. |
 | 22 | Kopfzeile | Standort, Sync, Zahnrad | nach Admin-Anmeldung zusätzlich Knopf „Admin“ (Handy: nur Symbol) | Spielwiese 21.10.2026. |
+| 23 | Detail-Zeitraum | 6 Std · Heute · Gestern · 7 Tage · Zeitraum | zusätzlich „14 Tage“; „Zeitraum“ als schmale Kachel „Mehr“ mit Kalender-Symbol; bis 15 Tage Einzelwerte statt Tageswerte | Max 21.10.2026: 14 Tage oft gebraucht, eigener Zeitraum selten. |
+| 24 | Detail „Über 7 °C“ | reine Liste | Zeile anklicken/überfahren markiert die Stelle im Diagramm | Max 21.10.2026. |
 
 ## Zufällig anders (nur auf den Bildern)
 

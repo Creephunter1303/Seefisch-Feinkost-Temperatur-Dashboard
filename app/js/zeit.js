@@ -89,6 +89,7 @@ export const SCHNELL = [
   { id: 'heute', wt: 'HEUTE' },
   { id: 'gestern', wt: 'GESTERN' },
   { id: '7t', wt: 'LETZTE', nr: '7 Tage' },
+  { id: '14t', wt: 'LETZTE', nr: '14 Tage' },
 ];
 
 export function vorlagen(jetzt) {
@@ -113,6 +114,7 @@ export function bereich(id, jetzt, eigen) {
     case 'heute': return [heute0, jetzt];
     case 'gestern': return [mitternacht(p.j, p.m, p.t - 1), heute0];
     case '7t': return [jetzt - 7 * TAG, jetzt];
+    case '14t': return [jetzt - 14 * TAG, jetzt];
     case '30t': return [jetzt - 30 * TAG, jetzt];
     case 'letzterMonat': return [mitternacht(p.j, p.m - 1, 1), mitternacht(p.j, p.m, 1)];
     case '3m': {
@@ -144,7 +146,8 @@ export function bereichText(id, jetzt, eigen) {
   return datumLang(von) + ' – ' + bisAnz;
 }
 
-export const istLang = (von, bis) => bis - von > 8 * TAG;
+// bis gut 2 Wochen Einzelwerte (Spitzen bleiben sichtbar), darüber Tageswerte
+export const istLang = (von, bis) => bis - von > 15 * TAG;
 
 // Text der Kachel „Zeitraum“ nach eigener Wahl: „10.–16.08.“ bzw. „28.09.–03.10.“
 export function eigenKurz(eigen) {

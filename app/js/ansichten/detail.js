@@ -25,6 +25,10 @@ export function ausschnittAufheben() {
   Z.zeitraum = v.zeitraum; Z.eigen = v.eigen; Z.auswahl = null; Z.vorAuswahl = null;
 }
 
+// Angeklickte Zeile unter „Über … °C“: bleibt im Diagramm markiert, bis sie nochmal angeklickt
+// wird oder der Sensor wechselt. { mac, von, bis, stufe }
+const markiert = () => (Z.markiert && Z.markiert.mac === Z.sensor ? Z.markiert : null);
+
 // Neu laden, wenn Sensor oder Zeitraum wechseln oder neue Daten da sind
 export function verlaufKey() {
   const e = zr();
@@ -40,13 +44,15 @@ function kacheln(j) {
     if (z.id === 'gestern') nr = teile(tagesBeginn(j) - 1).t + '.';
     return '<button class="tag' + (Z.zeitraum === z.id ? ' aktiv' : '') + '" data-zeitraum="' + z.id + '"><span class="text"><span class="wt">' + z.wt + '</span><span class="nr">' + nr + '</span></span></button>';
   }).join('');
-  let nr = 'Mehr' + ICON.runterKlein, lang = false;
+  // selten gebraucht: schmale Kachel „Mehr“, erst mit gewähltem Zeitraum so breit wie nötig
+  let wt = 'MEHR', nr = ICON.kalender, lang = false;
   if (!ausSchnell) {
+    wt = 'ZEITRAUM';
     if (Z.zeitraum === 'auswahl') nr = 'Ausschnitt';
     else if (vl) nr = vl.kurz;
     else if (Z.eigen) { nr = eigenKurz(Z.eigen); lang = true; }
   }
-  html += '<button class="tag' + (!ausSchnell ? ' aktiv' : '') + '" data-aktion="zeitraum-blatt" aria-haspopup="dialog"><span class="text"><span class="wt">ZEITRAUM</span><span class="nr' + (lang ? ' lang' : '') + '">' + nr + '</span></span></button>';
+  html += '<button class="tag mehr' + (!ausSchnell ? ' aktiv' : '') + '" data-aktion="zeitraum-blatt" aria-haspopup="dialog" aria-label="Weitere Zeiträume"><span class="text"><span class="wt">' + wt + '</span><span class="nr' + (lang ? ' lang' : '') + '">' + nr + '</span></span></button>';
   return html;
 }
 
@@ -110,7 +116,8 @@ function abweichungen(s, pts, j) {
     const st = stufeVon(x, s.grenze);
     const laufend = x.bis === letzte.t && (b - x.bis) / MIN < s.grauMin;
     const tagTxt = gleicherTag(x.von, j) ? '' : (j - x.von < 6 * TAG ? wochentag(x.von) + ' ' : datum(x.von) + ' ');
-    return '<div class="abweichung"><span class="zeit">' + tagTxt + uhr(x.von) + '–' + (laufend ? 'jetzt' : uhr(x.bis + 5 * MIN)) + '</span><span class="info">' + dauer(x.min) + ' · max ' + grad(x.max) + '</span><span class="status-chip ' + st + '">' + WORT[st] + '</span></div>';
+    const an = markiert() && markiert().von === x.von;
+    return '<button type="button" class="abweichung lauf' + (an ? ' gewaehlt' : '') + '" data-lauf="' + x.von + '-' + (x.bis + 5 * MIN) + '" data-stufe="' + st + '" aria-pressed="' + an + '" title="Im Diagramm markieren"><span class="zeit">' + tagTxt + uhr(x.von) + '–' + (laufend ? 'jetzt' : uhr(x.bis + 5 * MIN)) + '</span><span class="info">' + dauer(x.min) + ' · max ' + grad(x.max) + '</span><span class="status-chip ' + st + '">' + WORT[st] + '</span></button>';
   };
   // kurze Zeiträume: alles einzeln; lange: Alarme einzeln, kurze Spitzen als eine Zeile
   if (l.length <= 8) return titel + l.map(zeile).join('') + '</section>';
@@ -170,7 +177,10 @@ export function diagramm() {
     const dauerH = (bis - von) / STD;
     const tick = dauerH <= 7 ? 1 : dauerH <= 25 ? (W < 520 ? 6 : 3) : 24;
     if (tick === 24) {
-      for (let d = tagesBeginn(von); d <= bis; d = tagesBeginn(d + 26 * STD)) if (d >= von) ticks.push({ t: d, label: wochentag(d) + ' ' + teile(d).t + '.', links: true });
+      // Linie jeden Tag, Beschriftung nur so oft, wie Platz ist (14 Tage auf dem Handy: jeden 2.–3. Tag)
+      const jede = Math.max(1, Math.ceil(tageAnz * 64 / (W - L - R)));
+      let n = 0;
+      for (let d = tagesBeginn(von); d <= bis; d = tagesBeginn(d + 26 * STD)) if (d >= von) ticks.push({ t: d, label: n++ % jede ? '' : wochentag(d) + ' ' + teile(d).t + '.', links: true });
     } else {
       for (let t = Math.ceil(von / STD) * STD; t <= bis; t += STD) if (teile(t).h % tick === 0) ticks.push({ t, label: String(teile(t).h).padStart(2, '0') + ':00' });
     }
@@ -190,7 +200,7 @@ export function diagramm() {
   for (const k of ticks) {
     const xx = x(k.t);
     g += '<line x1="' + xx + '" x2="' + xx + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--diagramm-gitter)" stroke-width="1"/>';
-    if (xx > L + 4 && xx < W - (k.links ? 44 : 24)) g += '<text x="' + (k.links ? xx + 4 : xx) + '" y="' + (H - 10) + '" text-anchor="' + (k.links ? 'start' : 'middle') + '">' + k.label + '</text>';
+    if (k.label && xx > L + 4 && xx < W - (k.links ? 44 : 24)) g += '<text x="' + (k.links ? xx + 4 : xx) + '" y="' + (H - 10) + '" text-anchor="' + (k.links ? 'start' : 'middle') + '">' + k.label + '</text>';
   }
   // Lücken (keine Daten) schraffiert
   let luecken = '';
@@ -248,6 +258,7 @@ export function diagramm() {
   const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Temperaturverlauf ' + esc(s.name) + '">' +
     '<defs><pattern id="schraffur" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--flaeche)"/><rect width="4" height="8" fill="var(--schraffur)"/></pattern>' +
     (hatGrenze ? '<clipPath id="ueber"><rect x="0" y="0" width="' + W + '" height="' + gy + '"/></clipPath><clipPath id="unter"><rect x="0" y="' + gy + '" width="' + W + '" height="' + (H - gy) + '"/></clipPath>' : '') + '</defs>' +
+    '<rect id="markierung" visibility="hidden" y="' + T + '" height="' + (H - T - B) + '" rx="3"/>' +
     luecken + g + marks +
     (hatGrenze ? '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--rot-punkt)" stroke-width="2" stroke-dasharray="7 5"/>' : '') +
     '<rect id="auswahl" visibility="hidden" y="' + T + '" height="' + (H - T - B) + '" fill="var(--blau)" fill-opacity=".12" stroke="var(--blau)" stroke-width="1.5"/>' +
@@ -275,6 +286,36 @@ export function diagramm() {
     blase.style.top = Math.max(0, by * (r.height / H) - 48) + 'px';
   }
   function verstecke() { zeiger.setAttribute('visibility', 'hidden'); blase.hidden = true; }
+
+  // Zeile unter „Über … °C“: mit der Maus darüber = Vorschau, antippen/anklicken = bleibt markiert
+  const markRect = huelle.querySelector('#markierung');
+  function markiere(m) {
+    m = m || markiert();
+    if (!m || m.bis < von || m.von > bis) { markRect.setAttribute('visibility', 'hidden'); return; }
+    const x1 = x(Math.max(m.von, von)), x2 = x(Math.min(m.bis, bis)), b = Math.max(12, x2 - x1);   // kurze Spitzen mind. 12 px breit
+    markRect.setAttribute('x', Math.max(L, Math.min(W - R - b, (x1 + x2) / 2 - b / 2)));
+    markRect.setAttribute('width', b);
+    markRect.setAttribute('class', 'markierung ' + m.stufe);
+    markRect.setAttribute('visibility', 'visible');
+  }
+  markiere();
+  const lauf = (el) => { const [a, b] = el.dataset.lauf.split('-').map(Number); return { mac: s.mac, von: a, bis: b, stufe: el.dataset.stufe }; };
+  for (const el of document.querySelectorAll('.b-abw [data-lauf]')) {
+    el.addEventListener('pointerenter', (ev) => { if (ev.pointerType === 'mouse') markiere(lauf(el)); });
+    el.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') markiere(); });
+    el.addEventListener('click', () => {
+      const m = lauf(el), an = !(markiert() && markiert().von === m.von);
+      Z.markiert = an ? m : null;
+      for (const z of document.querySelectorAll('.b-abw [data-lauf]')) {
+        const ja = an && z === el;
+        z.classList.toggle('gewaehlt', ja); z.setAttribute('aria-pressed', ja);
+      }
+      markiere(an ? m : { von: Infinity });
+      // Handy: Liste steht unter dem Diagramm → Diagramm ins Bild holen
+      const r = huelle.getBoundingClientRect();
+      if (an && (r.top < 0 || r.bottom > window.innerHeight)) huelle.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
 
   // Ausschnitt: waagerecht ziehen (Maus, Stift, Finger). Senkrecht wischen scrollt
   // weiter die Seite (touch-action: pan-y), dann bricht der Browser das Ziehen ab.

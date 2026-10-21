@@ -135,9 +135,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .karte.temp.gross .t-wert { font-size: 60px; }
 .karte.temp.gross.st-offline .t-wert, .karte.temp.gross.st-meldet .t-wert { font-size: 40px; }
 .karte.temp.gross { cursor: default; }
-.zeitraum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+/* fünf feste Zeiträume gleich breit, „Mehr“ nur so breit wie sein Inhalt */
+.zeitraum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 8px; }
+.zeitraum .tag.mehr { padding: 0 14px; }
+.zeitraum .tag.mehr .nr svg { width: 26px; height: 26px; }
 .app.schmal .zeitraum { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.app.schmal .zeitraum .tag:nth-child(5) { grid-column: span 2; }
 .zeitraum .tag { height: 60px; font: inherit; padding: 0 4px; }
 .zeitraum .tag .wt { font-size: 16px; }   /* seefisch.css: 15 px – Auftrag verlangt Text ≥ 16 px */
 .zeitraum .tag .nr { font-size: 24px; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
@@ -353,3 +355,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
   .admin-breit { grid-template-columns: 440px minmax(0, 1fr) minmax(360px, 480px); grid-template-areas: "liste form protokoll"; }
   .ab-protokoll { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; }
 }
+
+/* ---------- Detail: Zeile „Über … °C“ markiert die Stelle im Diagramm ---------- */
+.abweichung.lauf { width: calc(100% + 16px); margin: 0 -8px; padding: 10px 8px; background: none; color: inherit; font: inherit; text-align: left; border-top: 1px solid var(--linie); border-radius: 0; }
+.abweichung.lauf:first-of-type { border-top: 0; }
+.abweichung.lauf.gewaehlt { background: var(--blau-aktiv); box-shadow: inset 0 0 0 2px var(--blau-aktiv-rand); border-radius: 10px; }
+.abweichung.lauf.gewaehlt + .abweichung.lauf { border-top-color: transparent; }
+@media (hover: hover) { .abweichung.lauf:not(.gewaehlt):hover { background: var(--blau-feld); border-radius: 10px; } }
+.diagramm .markierung { fill: var(--achtung-rand); fill-opacity: .5; stroke: var(--achtung-punkt); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.diagramm .markierung.alarm { fill: var(--rot-punkt); fill-opacity: .16; stroke: var(--rot-punkt); }
+
+/* ---------- Admin breit: Änderungen dezent (selten gebraucht) ---------- */
+.ab-protokoll .abschnitt { background: transparent; box-shadow: none; padding: 6px 8px; }
+.ab-protokoll { --protokoll-text: #5B6573; }   /* heller als --text-3, noch ≥ 4,5:1 auf dem Hintergrund */
+.ab-protokoll .abschnitt h2 { font-size: 18px; color: var(--protokoll-text); margin-bottom: 6px; }
+.ab-protokoll .abweichung.protokoll { padding: 8px 0; gap: 2px 12px; border-top-color: #DCE2E8; }
+.ab-protokoll .abweichung.protokoll .zeit { font-family: var(--schrift); font-size: 16px; font-weight: 500; color: var(--protokoll-text); min-width: 100px; }
+.ab-protokoll .abweichung.protokoll .info, .ab-protokoll .abweichung.protokoll .info b { color: var(--protokoll-text); }
+.ab-protokoll .abweichung.protokoll .info b { font-weight: 600; }

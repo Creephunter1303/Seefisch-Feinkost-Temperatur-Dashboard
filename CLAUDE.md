@@ -8,8 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.0** (UI aus der
-Spielwiese übernommen, 21.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.1** (21.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -124,6 +123,17 @@ hinterlegt“ (nie still OK).
   `sensor_gruppen.reihenfolge` (alte Tabelle), der Collector liest sie nicht.
 - Info-Blatt „Regeln für Sensoren“ (`admin.infoBlatt()`): mit PLAN-STAMMDATEN.md abgeglichen. Bei
   Änderungen am Pi-Plan mitziehen.
+
+## Entscheidungen (mit Max, 21.10.2026 → v0.2.1)
+
+- **Zeiträume:** 6 Std · Heute · Gestern · 7 Tage · **14 Tage** · „Mehr“. „Mehr“ ist schmal (Kalender-
+  Symbol, Spalte `auto`) und wird erst mit gewähltem Zeitraum breiter. Bis 15 Tage zeigt das Diagramm
+  Einzelwerte (`istLang` > 15 Tage → Tageswerte), damit Spitzen sichtbar bleiben.
+- **Zeile unter „Über … °C“ markiert die Stelle im Diagramm:** Maus darüber = Vorschau, anklicken/
+  antippen = bleibt markiert (`Z.markiert`, nur bis Sensorwechsel, nicht gespeichert), nochmal = weg.
+  Kurze Spitzen mind. 12 px breit. Auf dem Handy scrollt das Diagramm ins Bild. Das Diagramm selbst
+  bleibt unverändert. Gilt auch auf Touch – falls es dort stört, hinter den Schalter „Ausschnitt“ legen.
+- **Admin breit: „Änderungen“ dezent** (ohne Karte, graue Schrift `--protokoll-text`), wird selten gelesen.
 
 ## Dateien
 

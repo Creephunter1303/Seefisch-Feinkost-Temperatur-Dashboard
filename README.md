@@ -64,6 +64,13 @@ startet die App ohne Adressleiste und funktioniert auch ohne Netz (zeigt dann de
 
 Alles gilt nur für dieses Gerät.
 
+### Verlauf eines Sensors
+
+- Zeiträume: 6 Std, Heute, Gestern, 7 Tage, 14 Tage; weitere (30 Tage, Monat, Jahr, eigener) unter
+  dem Kalender-Knopf „Mehr“.
+- Unter „Über 7 °C“ eine Zeile anklicken (am Computer reicht Maus darüber): die Stelle wird im
+  Diagramm markiert. Nochmal anklicken hebt die Markierung auf.
+
 ### 5. Am Wagen auslesen (Bluetooth)
 
 Ist der Wagen unterwegs und meldet sich nicht, erscheint unter seinen Karten **„Am Wagen auslesen“**.
