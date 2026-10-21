@@ -39,6 +39,8 @@ export function einstellungen() {
     (bluetoothDa()
       ? '<div class="schalter-zeile"><div class="schalter-text"><strong>Gerät gehört zu</strong><span>Nur bei diesem Wagen erscheint „Am Wagen auslesen“. Laptop und Büro-PC: keinem Wagen.</span></div><button class="auswahl" data-aktion="blatt-wagen">' + ICON.wagen + '<span>' + esc(Z.wagen || 'keinem Wagen') + '</span>' + ICON.runter + '</button></div>'
       : '<div class="schalter-zeile"><div class="schalter-text"><strong>Am Wagen auslesen</strong><span>Geht auf diesem Gerät nicht – Bluetooth gibt es nur in Chrome (Android-Tablet, Windows, Mac), nicht auf iPhone/iPad.</span></div></div>') +
+    '<div class="schalter-zeile"><div class="schalter-text"><strong>Ausschnitt im Diagramm markieren</strong><span>Im Diagramm ziehen und den Bereich vergrößern. Nur für Laptop und Computer – auf Handy und Tablet stört es beim Wischen.</span></div>' +
+    '<button type="button" class="kipp' + (Z.ausschnitt ? ' an' : '') + '" role="switch" aria-checked="' + (Z.ausschnitt ? 'true' : 'false') + '" aria-label="Ausschnitt im Diagramm markieren" data-aktion="ausschnitt-schalter"></button></div>' +
     '<div class="schalter-zeile"><div class="schalter-text"><strong>Startansicht</strong><span>Welcher Standort beim Öffnen gezeigt wird</span></div><button class="auswahl" data-aktion="blatt-start">' + ICON.pin + '<span>' + esc(Z.start || 'Alle') + '</span>' + ICON.runter + '</button></div>' +
     '</section>' +
     '<section class="abschnitt"><h2>So wird bewertet</h2>' +

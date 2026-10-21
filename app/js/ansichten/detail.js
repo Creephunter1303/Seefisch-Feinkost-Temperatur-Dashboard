@@ -14,9 +14,21 @@ import {
 
 export const jetztZeit = () => bezug();
 
+// Zusatzangabe zum Zeitraum: eigene Daten (Blatt) oder gezogener Ausschnitt (Diagramm)
+export const zr = () => (Z.zeitraum === 'auswahl' ? Z.auswahl : Z.eigen);
+
+// Ausschnitt im Diagramm gezogen → main.js zeichnet neu
+let ausschnittFertig = () => {};
+export function beiAusschnitt(f) { ausschnittFertig = f; }
+export function ausschnittAufheben() {
+  const v = Z.vorAuswahl || { zeitraum: '6h', eigen: Z.eigen };
+  Z.zeitraum = v.zeitraum; Z.eigen = v.eigen; Z.auswahl = null; Z.vorAuswahl = null;
+}
+
 // Neu laden, wenn Sensor oder Zeitraum wechseln oder neue Daten da sind
 export function verlaufKey() {
-  return Z.sensor + '|' + Z.zeitraum + '|' + (Z.eigen ? Z.eigen.von + Z.eigen.bis : '') + '|' + D.stand + '|' + (D.tabletUm || '');
+  const e = zr();
+  return Z.sensor + '|' + Z.zeitraum + '|' + (e ? e.von + '-' + e.bis : '') + '|' + D.stand + '|' + (D.tabletUm || '');
 }
 
 function kacheln(j) {
@@ -30,7 +42,8 @@ function kacheln(j) {
   }).join('');
   let nr = 'Mehr' + ICON.runterKlein, lang = false;
   if (!ausSchnell) {
-    if (vl) nr = vl.kurz;
+    if (Z.zeitraum === 'auswahl') nr = 'Ausschnitt';
+    else if (vl) nr = vl.kurz;
     else if (Z.eigen) { nr = eigenKurz(Z.eigen); lang = true; }
   }
   html += '<button class="tag' + (!ausSchnell ? ' aktiv' : '') + '" data-aktion="zeitraum-blatt" aria-haspopup="dialog"><span class="text"><span class="wt">ZEITRAUM</span><span class="nr' + (lang ? ' lang' : '') + '">' + nr + '</span></span></button>';
@@ -41,7 +54,7 @@ export function detail() {
   const s = sensorVon(Z.sensor);
   if (!s) return '';
   const j = jetztZeit();
-  const [von, bis] = bereich(Z.zeitraum, j, Z.eigen);
+  const [von, bis] = bereich(Z.zeitraum, j, zr());
   const v = Z.verlauf && Z.verlauf.key === verlaufKey() ? Z.verlauf : null;
   const pts = v && v.punkte ? v.punkte : null;
 
@@ -69,7 +82,9 @@ export function detail() {
     '<main class="detail"><div class="gruppe" style="padding:0"><span class="name">' + icon + '<h2>' + esc(s.standort || OHNE_ZUORDNUNG) + '</h2></span>' + (s.aktiv ? '' : '<span class="zusatz">ausgemustert</span>') + '</div>' +
     '<div class="detail-raster">' +
     '<div class="b-wert">' + karte(s, true) + knopfAuslesen(gruppeVon(s)) + '</div>' +
-    '<div class="b-zeit"><div class="zeitraum">' + kacheln(j) + '</div><div class="zeitraum-text">' + bereichText(Z.zeitraum, j, Z.eigen) + '</div></div>' +
+    '<div class="b-zeit"><div class="zeitraum">' + kacheln(j) + '</div><div class="zeitraum-text"><span>' + bereichText(Z.zeitraum, j, zr()) + '</span>' +
+    (Z.zeitraum === 'auswahl' ? '<button class="knopf-2 klein" data-aktion="ausschnitt-weg">' + ICON.zurueck + 'Ganzer Zeitraum</button>'
+      : Z.ausschnitt && pts && pts.length > 1 ? '<span class="tipp">Im Diagramm waagerecht ziehen: Ausschnitt vergrößern</span>' : '') + '</div></div>' +
     '<section class="abschnitt diagramm b-chart">' + chart + '</section>' +
     (kz ? '<div class="b-kz">' + kz + '</div>' : '') +
     (abw ? '<div class="b-abw">' + abw + '</div>' : '') +
@@ -128,7 +143,7 @@ export function diagramm() {
   if (!huelle || !Z.verlauf || !Z.verlauf.punkte) return;
   const s = sensorVon(Z.sensor);
   const j = jetztZeit();
-  const [von, bis] = bereich(Z.zeitraum, j, Z.eigen);
+  const [von, bis] = bereich(Z.zeitraum, j, zr());
   const roh = Z.verlauf.punkte;
   const lang = istLang(von, bis);
   const pts = lang ? tageswerte(roh) : roh;
@@ -235,6 +250,7 @@ export function diagramm() {
     (hatGrenze ? '<clipPath id="ueber"><rect x="0" y="0" width="' + W + '" height="' + gy + '"/></clipPath><clipPath id="unter"><rect x="0" y="' + gy + '" width="' + W + '" height="' + (H - gy) + '"/></clipPath>' : '') + '</defs>' +
     luecken + g + marks +
     (hatGrenze ? '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--rot-punkt)" stroke-width="2" stroke-dasharray="7 5"/>' : '') +
+    '<rect id="auswahl" visibility="hidden" y="' + T + '" height="' + (H - T - B) + '" fill="var(--blau)" fill-opacity=".12" stroke="var(--blau)" stroke-width="1.5"/>' +
     '<g id="zeiger" visibility="hidden"><line id="zl" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--text)" stroke-width="1.5"/><circle id="zk" r="5.5" fill="var(--text)" stroke="var(--flaeche)" stroke-width="2"/></g></svg>';
   huelle.innerHTML = svg + '<div class="blase" id="blase" hidden></div>';
   const svgEl = huelle.querySelector('svg'), blase = huelle.querySelector('#blase'), zeiger = huelle.querySelector('#zeiger');
@@ -259,9 +275,65 @@ export function diagramm() {
     blase.style.top = Math.max(0, by * (r.height / H) - 48) + 'px';
   }
   function verstecke() { zeiger.setAttribute('visibility', 'hidden'); blase.hidden = true; }
-  svgEl.addEventListener('pointermove', zeige);
-  svgEl.addEventListener('pointerdown', zeige);
-  svgEl.addEventListener('pointerleave', verstecke);
+
+  // Ausschnitt: waagerecht ziehen (Maus, Stift, Finger). Senkrecht wischen scrollt
+  // weiter die Seite (touch-action: pan-y), dann bricht der Browser das Ziehen ab.
+  const rahmen = huelle.querySelector('#auswahl');
+  const pxVon = (ev) => { const r = svgEl.getBoundingClientRect(); return Math.min(W - R, Math.max(L, (ev.clientX - r.left) * (W / r.width))); };
+  const zeitVon = (px) => von + (px - L) / (W - L - R) * (bis - von);
+  const runden = (t, auf) => (auf ? Math.ceil : Math.floor)(t / (5 * MIN)) * 5 * MIN;
+  const zeitText = (t) => ((bis - von) > 1.1 * TAG ? wochentag(t) + ' ' + (lang ? datum(t) + ' ' : '') : '') + uhr(t);
+  let zug = null;
+  // Aus (Standard): nur die Blase mit dem Wert unter dem Finger/der Maus, kein Ziehen
+  if (!Z.ausschnitt) {
+    svgEl.addEventListener('pointermove', zeige);
+    svgEl.addEventListener('pointerdown', zeige);
+    svgEl.addEventListener('pointerleave', verstecke);
+    return;
+  }
+  svgEl.style.touchAction = 'pan-y';
+  svgEl.addEventListener('pointerdown', (ev) => {
+    zeige(ev);
+    if (ev.button > 0) return;
+    zug = { x0: pxVon(ev), x1: pxVon(ev), aktiv: false };
+    try { svgEl.setPointerCapture(ev.pointerId); } catch (x) { /* egal */ }
+  });
+  svgEl.addEventListener('pointermove', (ev) => {
+    if (zug) {
+      zug.x1 = pxVon(ev);
+      if (!zug.aktiv && Math.abs(zug.x1 - zug.x0) > 8) zug.aktiv = true;
+      if (zug.aktiv) {
+        const a = Math.min(zug.x0, zug.x1), b = Math.max(zug.x0, zug.x1);
+        zeiger.setAttribute('visibility', 'hidden');
+        rahmen.setAttribute('visibility', 'visible'); rahmen.setAttribute('x', a); rahmen.setAttribute('width', b - a);
+        const r = svgEl.getBoundingClientRect();
+        blase.hidden = false;
+        blase.textContent = zeitText(runden(zeitVon(a), false)) + ' – ' + zeitText(runden(zeitVon(b), true));
+        blase.style.left = Math.min(r.width - 110, Math.max(110, (a + b) / 2 * (r.width / W))) + 'px';
+        blase.style.top = '0px';
+        return;
+      }
+    }
+    zeige(ev);
+  });
+  function zugEnde(abbrechen) {
+    if (!zug) return;
+    const z = zug; zug = null;
+    rahmen.setAttribute('visibility', 'hidden');
+    if (!z.aktiv) return;
+    verstecke();
+    if (abbrechen) return;
+    let a = runden(zeitVon(Math.min(z.x0, z.x1)), false), b = runden(zeitVon(Math.max(z.x0, z.x1)), true);
+    if (b - a < 30 * MIN) { const m = (a + b) / 2; a = runden(m - 15 * MIN, false); b = a + 30 * MIN; }   // mindestens 30 Min
+    a = Math.max(a, von); b = Math.min(b, bis);
+    if (Z.zeitraum !== 'auswahl') Z.vorAuswahl = { zeitraum: Z.zeitraum, eigen: Z.eigen };
+    Z.zeitraum = 'auswahl'; Z.auswahl = { von: a, bis: b };
+    Z.verlauf = { key: verlaufKey(), punkte: roh.filter((p) => p.t >= a && p.t <= b) };   // schon geladen – kein neuer Abruf
+    ausschnittFertig();
+  }
+  svgEl.addEventListener('pointerup', () => zugEnde(false));
+  svgEl.addEventListener('pointercancel', () => { zugEnde(true); verstecke(); });
+  svgEl.addEventListener('pointerleave', () => { if (!zug) verstecke(); });
 }
 
 // ---------- Zeitraum-Blatt ----------

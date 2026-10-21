@@ -6,6 +6,9 @@ export const Z = {
   sensor: null,            // MAC in der Detailansicht
   zeitraum: '6h',
   eigen: null,             // { von: 'YYYY-MM-DD', bis: 'YYYY-MM-DD' }
+  ausschnitt: merk.lies('ausschnitt', false),   // Ausschnitt im Diagramm ziehen – Standard AUS (stört das Wischen auf dem Handy)
+  auswahl: null,           // { von, bis } in ms – im Diagramm gezogener Ausschnitt (zeitraum 'auswahl')
+  vorAuswahl: null,        // { zeitraum, eigen } – wohin „Ganzer Zeitraum“ zurückführt
   zeitraumFehler: null,
   filter: null,            // gewählter Standort (null = alle)
   blatt: null,             // filter | start | wagen | zeitraum | auslesen

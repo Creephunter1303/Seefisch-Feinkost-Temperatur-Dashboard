@@ -311,3 +311,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .blatt .knopf-2 { margin-top: 8px; }
 .legende i.gestrichelt { border-top: 3px dashed var(--diagramm-linie); }
 
+/* ---------- Diagramm: Ausschnitt ziehen ---------- */
+.zeitraum-text { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-height: 28px; }
+.zeitraum-text .tipp { font-size: 16px; color: var(--text-3); }
+.zeitraum-text .knopf-2.klein { min-height: 44px; padding: 0 14px 0 8px; font-size: 17px; display: inline-flex; align-items: center; gap: 2px; }
+.zeitraum-text .knopf-2.klein svg { width: 20px; height: 20px; }
+@media (pointer: fine) { #diagramm svg { cursor: crosshair; } }
+

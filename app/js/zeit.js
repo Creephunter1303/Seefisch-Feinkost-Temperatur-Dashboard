@@ -121,6 +121,7 @@ export function bereich(id, jetzt, eigen) {
     }
     case 'diesesJahr': return [mitternacht(p.j, 1, 1), jetzt];
     case 'letztesJahr': return [mitternacht(p.j - 1, 1, 1), mitternacht(p.j, 1, 1)];
+    case 'auswahl': return [eigen.von, Math.min(eigen.bis, jetzt)];   // im Diagramm gezogener Ausschnitt (ms)
     case 'eigen': {
       const von = ausTagKey(eigen.von), b = teile(ausTagKey(eigen.bis));
       const bis = mitternacht(b.j, b.m, b.t + 1);
@@ -132,6 +133,11 @@ export function bereich(id, jetzt, eigen) {
 
 export function bereichText(id, jetzt, eigen) {
   const [von, bis] = bereich(id, jetzt, eigen);
+  if (id === 'auswahl') {
+    const tagT = (t) => (gleicherTag(t, jetzt) ? 'Heute' : wochentag(t) + ' ' + datum(t));
+    if (istLang(von, bis)) return datumLang(von) + ' – ' + datumLang(bis - 1);
+    return tagT(von) + ' ' + uhr(von) + ' – ' + (gleicherTag(von, bis) ? '' : tagT(bis) + ' ') + uhr(bis);
+  }
   const bisAnz = bis === jetzt ? 'jetzt' : datumLang(bis - 1);
   if (id === '6h' || id === 'heute') return (gleicherTag(von, jetzt) ? 'Heute ' : 'Gestern ') + uhr(von) + ' – ' + uhr(bis);
   if (id === 'gestern') return wochentag(von) + ' ' + datumLang(von);

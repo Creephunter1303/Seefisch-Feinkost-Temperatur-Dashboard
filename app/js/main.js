@@ -6,7 +6,7 @@ import { merk } from './speicher.js';
 import { D, aktualisieren, beiAenderung, ladeGespeichert, ladeVerlauf, sensorVon, vergessen, tabletVerwerfen } from './daten.js';
 import { konfig, konfigSpeichern, normalisiereUrl, keyIstGeheim, zaehle } from './rest.js';
 import { uebersicht, blattStandort } from './ansichten/uebersicht.js';
-import { detail, diagramm, blattZeitraum, eigenPruefen, verlaufKey, jetztZeit } from './ansichten/detail.js';
+import { detail, diagramm, blattZeitraum, eigenPruefen, verlaufKey, jetztZeit, zr, beiAusschnitt, ausschnittAufheben } from './ansichten/detail.js';
 import { A, blattAuslesen, beiAuslesen, starte as auslesenStarten, koppelnUndLesen, schliessen as auslesenSchliessen } from './ansichten/auslesen.js';
 import { einstellungen, einrichtung } from './ansichten/einstellungen.js';
 import { bereich } from './zeit.js';
@@ -128,7 +128,7 @@ function verlaufSicherstellen() {
   // gleicher Zeitraum, nur neue Daten: alte Kurve stehen lassen, bis die neue da ist
   Z.verlauf = { key, laedt: true, punkte: alt && alt.punkte, n: 0 };
   const j = jetztZeit();
-  const [von, bis] = bereich(Z.zeitraum, j, Z.eigen);
+  const [von, bis] = bereich(Z.zeitraum, j, zr());
   ladeVerlauf(Z.sensor, von, bis, j, (n) => {
     if (Z.verlauf.key !== key || Z.verlauf.punkte) return;
     Z.verlauf.n = n;
@@ -193,14 +193,14 @@ app.addEventListener('click', async (e) => {
     else Z.filter = w;
     Z.blatt = null; render(); return;
   }
-  if (el.dataset.vorlage) { Z.zeitraum = el.dataset.vorlage; Z.blatt = null; Z.zeitraumFehler = null; render(); return; }
+  if (el.dataset.vorlage) { Z.vorAuswahl = null; Z.zeitraum = el.dataset.vorlage; Z.blatt = null; Z.zeitraumFehler = null; render(); return; }
   if (a === 'blatt-zu') { if (e.target === el) { if (Z.blatt === 'auslesen') auslesenSchliessen(); Z.blatt = null; Z.zeitraumFehler = null; render(); } return; }
   if (el.dataset.sensor && !a) {
     Z.sensor = el.dataset.sensor; Z.verlauf = null;
     if (Z.layout.geteilt) { Z.seite = 'detail'; render(); return; }   // Übersicht bleibt stehen, rechts wechselt der Verlauf
     seite('detail'); return;
   }
-  if (el.dataset.zeitraum) { Z.zeitraum = el.dataset.zeitraum; render(); return; }
+  if (el.dataset.zeitraum) { Z.vorAuswahl = null; Z.zeitraum = el.dataset.zeitraum; render(); return; }
   switch (a) {
     case 'zeitraum-blatt': Z.blatt = 'zeitraum'; break;
     case 'blatt': Z.blatt = 'filter'; break;
@@ -218,6 +218,12 @@ app.addEventListener('click', async (e) => {
     case 'auslesen-koppeln': koppelnUndLesen(el.dataset.mac); return;
     case 'auslesen-fertig': Z.blatt = null; auslesenSchliessen(); break;
     case 'tablet-weg': tabletVerwerfen(); Z.verlauf = null; break;
+    // im Diagramm gezogener Ausschnitt
+    case 'ausschnitt-weg': ausschnittAufheben(); break;
+    case 'ausschnitt-schalter':
+      Z.ausschnitt = !Z.ausschnitt; merk.schreib('ausschnitt', Z.ausschnitt);
+      if (!Z.ausschnitt && Z.zeitraum === 'auswahl') ausschnittAufheben();
+      break;
     case 'link-kopieren': {
       const link = einrichtungsLink();
       try { await navigator.clipboard.writeText(link); Z.meldung = { art: 'info', text: 'Einrichtungslink kopiert. Auf dem anderen Gerät einmal öffnen, dann ist es eingerichtet. Der Link enthält den Schlüssel – nur an eigene Geräte geben.' }; }
@@ -262,6 +268,7 @@ let rTimer;
 window.addEventListener('resize', () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const alt = JSON.stringify(Z.layout); layout(); if (JSON.stringify(Z.layout) !== alt) { if (Z.seite === 'detail' || Z.seite.startsWith('admin') || alt.includes('"geteilt":' + !Z.layout.geteilt)) render(); else diagramm(); } }, 150); });
 beiAenderung(nachDaten);
 beiAuslesen(() => { if (Z.blatt === 'auslesen') render(); else nachDaten(); });
+beiAusschnitt(() => render());
 
 // ---------- Service Worker (App-Dateien + Schriften offline) ----------
 // Lokal beim Entwickeln nur mit ?sw=1, sonst liefert der Zwischenspeicher alte Dateien.
