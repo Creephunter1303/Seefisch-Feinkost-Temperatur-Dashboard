@@ -4,6 +4,9 @@
    „Am Wagen auslesen“ (Phase 2). Ergänzt: Sonderzustände, Einrichtung, Admin.
    ========================================================================= */
 :root {
+  --meldet: #7F1D1D;           /* Meldet nicht: dunkles Rot (Rahmen, gefüllte Statuszeile) */
+  --meldet-flaeche: #F3E1E1;
+  --meldet-inhalt: #5C1414;
   /* Status-Erweiterung für Temperaturen (Designsystem Abschnitt 4: Bernstein nur bei echter Dreistufigkeit) */
   --achtung-flaeche: var(--hinweis-flaeche);
   --achtung-rand: var(--hinweis-rand);
@@ -72,10 +75,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .karte.temp.st-achtung .t-wert { color: var(--achtung-text); }
 .karte.temp.st-achtung .status-zeile { border-color: var(--achtung-rand); color: var(--achtung-text); }
 
-.karte.temp.st-alarm, .karte.temp.st-meldet { background: var(--rot-flaeche); border: 3px solid var(--rot-punkt); box-shadow: 0 6px 16px rgba(180,35,35,.16); }
+.karte.temp.st-alarm { background: var(--rot-flaeche); border: 3px solid var(--rot-punkt); box-shadow: 0 6px 16px rgba(180,35,35,.16); }
 .karte.temp.st-alarm .t-wert { color: var(--rot-inhalt); }
-.karte.temp.st-alarm .status-zeile, .karte.temp.st-meldet .status-zeile { border-color: var(--rot-linie); color: var(--rot-text); }
-.karte.temp.st-meldet .t-wert { color: var(--rot-inhalt); font-size: 30px; white-space: normal; }
+.karte.temp.st-alarm .status-zeile { border-color: var(--rot-linie); color: var(--rot-text); }
+/* Meldet nicht: dunkles Rot, Statuszeile gefüllt – Problem wie Alarm, aber nicht zu verwechseln */
+.karte.temp.st-meldet { background: var(--meldet-flaeche); border: 3px solid var(--meldet); box-shadow: 0 6px 16px rgba(127,29,29,.22); }
+.karte.temp.st-meldet .t-name, .karte.temp.st-meldet .t-wert { color: var(--meldet-inhalt); }
+.karte.temp.st-meldet .t-wert { font-size: 30px; white-space: normal; }
+.karte.temp.st-meldet .status-zeile { background: var(--meldet); border-color: var(--meldet); color: #FFFFFF; }
+.karte.temp.st-meldet .t-grenze { color: #F3E1E1; }
 .karte.temp .t-wert small.zuletzt { display: block; font-family: var(--schrift); font-size: 16px; font-weight: 500; margin: 0 0 4px; }
 
 .karte.temp.st-offline { background: var(--offline-flaeche); border-color: var(--offline-rand); }
@@ -163,7 +171,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .status-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 16px; font-size: 16px; font-weight: 600; white-space: nowrap; }
 .status-chip.ok { background: var(--gruen-flaeche); color: var(--gruen-text); box-shadow: inset 0 0 0 1.5px var(--gruen-rand); }
 .status-chip.achtung { background: var(--achtung-flaeche); color: var(--achtung-text); box-shadow: inset 0 0 0 1.5px var(--achtung-rand); }
-.status-chip.alarm, .status-chip.meldet { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.status-chip.alarm { background: var(--rot-flaeche); color: var(--rot-text); box-shadow: inset 0 0 0 1.5px var(--rot-rand); }
+.status-chip.meldet { background: var(--meldet); color: #FFFFFF; box-shadow: none; }
 .status-chip.offline { background: var(--offline-flaeche); color: var(--offline-text); box-shadow: inset 0 0 0 1.5px var(--offline-rand); }
 .leer.klein { font-size: 17px; padding: 12px 14px; }
 
