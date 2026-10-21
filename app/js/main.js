@@ -94,7 +94,7 @@ function geteilt() {
 
 function render() {
   const inhalt = seitenInhalt();
-  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt === 'auslesen' ? (A.gruppe ? blattAuslesen() : '') : Z.blatt ? blattStandort() : '';
+  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt === 'auslesen' ? (A.gruppe ? blattAuslesen() : '') : Z.blatt === 'admininfo' ? (admin ? admin.infoBlatt() : '') : Z.blatt ? blattStandort() : '';
   app.innerHTML = '<div id="seite">' + inhalt + '</div><div id="blatt-platz">' + blatt + '</div>';
   document.body.classList.toggle('blatt-offen', !!blatt);
   diagramm();
@@ -224,6 +224,9 @@ app.addEventListener('click', async (e) => {
       Z.ausschnitt = !Z.ausschnitt; merk.schreib('ausschnitt', Z.ausschnitt);
       if (!Z.ausschnitt && Z.zeitraum === 'auswahl') ausschnittAufheben();
       break;
+    // Info zum Sensoren-Verwalten
+    case 'admin-info': Z.blatt = 'admininfo'; break;
+    case 'info-zu': Z.blatt = null; break;
     case 'link-kopieren': {
       const link = einrichtungsLink();
       try { await navigator.clipboard.writeText(link); Z.meldung = { art: 'info', text: 'Einrichtungslink kopiert. Auf dem anderen Gerät einmal öffnen, dann ist es eingerichtet. Der Link enthält den Schlüssel – nur an eigene Geräte geben.' }; }

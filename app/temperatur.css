@@ -318,3 +318,38 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .zeitraum-text .knopf-2.klein svg { width: 20px; height: 20px; }
 @media (pointer: fine) { #diagramm svg { cursor: crosshair; } }
 
+/* ---------- Admin: Info-Knopf und Regeln-Blatt ---------- */
+.kopf.unter .info-knopf { margin-left: auto; flex-shrink: 0; color: var(--blau); }
+.blatt.regeln h3 { margin: 12px 0 2px; }
+.blatt.regeln ul, .blatt.regeln ol { margin: 4px 0; padding-left: 22px; font-size: 17px; line-height: 1.4; color: var(--text-2); }
+.blatt.regeln li { margin: 4px 0; }
+.blatt.regeln b { color: var(--text); }
+
+/* =========================================================================
+   Knopf „Admin“ in der Kopfzeile (Einstellung) und Admin-Maske für große Bildschirme
+   ========================================================================= */
+.admin-knopf { flex-shrink: 0; }
+.app.schmal .admin-knopf { padding: 0; width: 56px; justify-content: center; }
+.app.schmal .admin-knopf span { display: none; }
+
+.admin-breit { display: grid; grid-template-columns: minmax(380px, 440px) minmax(0, 1fr); grid-template-areas: "liste form" "liste protokoll"; gap: 20px 24px; align-items: start; padding: 20px 32px 48px; width: 100%; max-width: 2400px; margin-inline: auto; box-sizing: border-box; }
+.ab-liste { grid-area: liste; position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; }
+.ab-form { grid-area: form; }
+.ab-protokoll { grid-area: protokoll; }
+.ab-spalte { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.admin-zeile.gewaehlt { background: var(--blau-aktiv); box-shadow: inset 0 0 0 2px var(--blau-aktiv-rand); color: var(--blau); }
+.admin-zeile.gewaehlt .z { color: var(--blau); }
+.ab-leer { background: var(--flaeche); border-radius: var(--radius-knopf); box-shadow: inset 0 0 0 1.5px var(--linie); padding: 28px 24px; display: flex; flex-direction: column; gap: 6px; font-size: 18px; color: var(--text-3); }
+.ab-leer b { font-size: 22px; color: var(--text); }
+/* Formular rechts: Abschnitte nebeneinander */
+.formular.breit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.formular.breit .form-titel { grid-column: 1 / -1; margin: 0; font-family: var(--schrift-schmal); font-size: 30px; }
+.formular.breit .abschnitt:nth-of-type(3), .formular.breit .meldung, .formular.breit .form-knoepfe { grid-column: 1 / -1; }
+.form-knoepfe { display: flex; gap: 12px; align-items: center; }
+.form-knoepfe .primaer { flex: 1; max-width: 420px; margin-top: 0; }
+.formular > .form-knoepfe { margin-top: 4px; }
+/* Sehr breit (21:9): Änderungen als dritte Spalte */
+@media (min-width: 1900px) {
+  .admin-breit { grid-template-columns: 440px minmax(0, 1fr) minmax(360px, 480px); grid-template-areas: "liste form protokoll"; }
+  .ab-protokoll { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; }
+}

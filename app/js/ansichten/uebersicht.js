@@ -7,6 +7,7 @@ import { D, aktive, punkteVon, bezug } from '../daten.js';
 import { status, heuteAlarm, RANG, WORT, grad, grenzText } from '../status.js';
 import { STD, MIN, uhr } from '../zeit.js';
 import { knopfAuslesen } from './auslesen.js';
+import { adminAngemeldet } from './admin-status.js';
 
 export function statusVon(s, b = bezug()) { return status(s, punkteVon(s.mac), b, D.letzter.get(s.mac), D.fensterAb); }
 
@@ -86,6 +87,7 @@ export function kopf() {
   if (!D.fehler && Z.filter && Z.filter !== Z.start) band += '<div class="hinweisband"><span style="flex:1">Du siehst nur <b>' + esc(Z.filter) + '</b></span><button data-aktion="filter-weg">Zurück zu ' + esc(Z.start || 'Alle') + '</button></div>';
   return '<header class="kopf"><div class="kopf-innen"><div class="kopf-zeile">' +
     '<button class="auswahl" data-aktion="blatt">' + (Z.filter ? ICON.pin : ICON.therm) + '<span>' + esc(Z.filter || 'Alle Standorte') + '</span><span class="pfeil">' + ICON.runter + '</span></button>' +
+    (adminAngemeldet() ? '<button class="auswahl admin-knopf" data-aktion="admin" aria-label="Admin-Bereich">' + ICON.regler + '<span>Admin</span></button>' : '') +
     '<span class="platzhalter"></span>' + sync +
     '<button class="icon-knopf" data-aktion="einstellungen" aria-label="Einstellungen">' + ICON.zahnrad + '</button></div>' +
     '<div class="baender">' + band + '</div></div></header>';

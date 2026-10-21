@@ -141,9 +141,9 @@ export function bearbeiten(mac) {
   A.form = s
     ? { neu: false, mac: s.mac, name: s.name, standort: s.standort || '', grenze: s.grenze === null ? '' : String(s.grenze).replace('.', ','), grau: s.grauMin, rot: s.rotMin, reihenfolge: s.reihenfolge, aktiv: s.aktiv, notiz: s.notiz }
     : { neu: true, mac: '', name: '', standort: '', grenze: '7', grau: 15, rot: 480, reihenfolge: 100, aktiv: true, notiz: '' };
-  Z.seite = 'admin-sensor';
+  Z.seite = Z.layout.breit ? 'admin' : 'admin-sensor';   // breit: Formular erscheint rechts neben der Liste
   neuZeichnen();
-  window.scrollTo(0, 0);
+  if (!Z.layout.breit) window.scrollTo(0, 0);
 }
 
 export async function speichern(werte) {
@@ -161,19 +161,45 @@ export async function speichern(werte) {
     else {
       const t = Date.now();
       A.meldung = { art: 'info', text: '„' + p.zeile.name + '“ gespeichert um ' + uhr(t) + '. Die Anzeige gilt sofort. Der Pi übernimmt es spätestens um ' + uhr(t + PI_TAKT_MIN * MIN) + ' (sobald dort die Übernahme aus Supabase eingeschaltet ist).' };
+      const macNach = A.form.neu ? p.zeile.mac : A.form.mac;
       A.form = null; Z.seite = 'admin';
       await Promise.all([aktualisieren({ voll: true }), ladeProtokoll()]);
+      if (Z.layout.breit && D.sensoren.some((x) => x.mac === macNach)) { const m = A.meldung; bearbeiten(macNach); A.meldung = m; neuZeichnen(); window.scrollTo(0, 0); }
     }
   } catch (e) { A.formFehler = fehlerText(e); }
   A.speichert = false; neuZeichnen();
 }
 
 // ---------- Darstellung ----------
-const kopf = (titel, aktion) => '<header class="kopf unter"><button class="zurueck" data-aktion="' + aktion + '">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">' + titel + '</h1></header>';
+const infoKnopf = '<button class="icon-knopf info-knopf" data-aktion="admin-info" aria-label="Regeln für Sensoren">' + ICON.info + '</button>';
+const kopf = (titel, aktion, info) => '<header class="kopf unter"><button class="zurueck" data-aktion="' + aktion + '">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">' + titel + '</h1>' + (info ? infoKnopf : '') + '</header>';
+
+// Info-Blatt: die Regeln für Sensoren (ergibt sich aus den Prüfungen in dieser Datei und in der Datenbank)
+export function infoBlatt() {
+  return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt regeln" role="dialog" aria-label="Regeln für Sensoren"><h2>Regeln für Sensoren</h2>' +
+    '<h3>Grundsätze</h3><ul>' +
+    '<li><b>Nichts wird gelöscht.</b> Ein Sensor wird nur ausgemustert. Sein Verlauf bleibt erhalten.</li>' +
+    '<li><b>Die MAC-Adresse ist der Sensor.</b> Sie lässt sich nach dem Anlegen nicht ändern. Ein anderer Sensor, auch ein Ersatz, ist immer ein neuer Eintrag.</li>' +
+    '<li><b>Ein Name nur einmal im Einsatz.</b> Zwei aktive Sensoren dürfen nicht gleich heißen (höchstens 40 Zeichen).</li></ul>' +
+    '<h3>Sensor ersetzen (z. B. defekt)</h3><ol>' +
+    '<li>Den alten Sensor öffnen, <b>„Im Einsatz“ ausschalten</b>, speichern. Erst dann ist sein Name wieder frei.</li>' +
+    '<li><b>Neuer Sensor</b> mit der neuen MAC-Adresse anlegen. Name, Standort, Grenze, Reihenfolge und Zeiten vom alten übernehmen.</li>' +
+    '<li>Die Karte steht zuerst auf „Meldet nicht · noch kein Wert“, bis der erste Wert angekommen ist (bis etwa ' + PI_TAKT_MIN + ' Minuten).</li>' +
+    '<li>Der alte Verlauf bleibt beim ausgemusterten Sensor, der neue Verlauf beginnt bei null. Beide sind nicht zusammengelegt.</li></ol>' +
+    '<h3>Neuen Sensor hinzufügen</h3><ul>' +
+    '<li>MAC-Adresse bereithalten (AA:BB:CC:DD:EE:FF, auch ohne Doppelpunkte möglich).</li>' +
+    '<li>Standort = Überschrift der Gruppe. Ein Wagen heißt so wie sein Standort. Bei Wagen „Meldet nicht nach“ auf mindestens ' + WAGEN_AB_MIN + ' Minuten lassen, sonst zählt der Standort nicht als Wagen („unterwegs“).</li></ul>' +
+    '<h3>Sensor wegnehmen (nicht ersetzt)</h3><ul><li>„Im Einsatz“ ausschalten. Die Karte verschwindet, der Verlauf bleibt. Wieder einschalten geht, solange der Name frei ist.</li></ul>' +
+    '<h3>Gut zu wissen</h3><ul>' +
+    '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten, sobald dort die Übernahme aus der Datenbank eingeschaltet ist.</li>' +
+    '<li>Unter „Änderungen“ steht, wer wann was geändert hat.</li></ul>' +
+    '<button class="primaer" data-aktion="info-zu">Verstanden</button></div></div>';
+}
 
 function zeileSensor(s) {
   const teile = [s.standort || 'ohne Standort', s.grenze === null ? 'keine Grenze' : 'Grenze ' + grenzText(s.grenze), 'Offline ab ' + dauer(s.grauMin), 'Meldet nicht ab ' + dauer(s.rotMin)];
-  return '<button class="blatt-zeile admin-zeile' + (s.aktiv ? '' : ' aus') + '" data-aktion="admin-sensor" data-mac="' + esc(s.mac) + '">' +
+  const gewaehlt = Z.layout.breit && A.form && !A.form.neu && A.form.mac === s.mac;
+  return '<button class="blatt-zeile admin-zeile' + (s.aktiv ? '' : ' aus') + (gewaehlt ? ' gewaehlt' : '') + '"' + (gewaehlt ? ' aria-current="true"' : '') + ' data-aktion="admin-sensor" data-mac="' + esc(s.mac) + '">' +
     '<span class="n">' + esc(s.name) + '<span class="z">' + esc(teile.join(' · ')) + '</span></span>' + ICON.weiter + '</button>';
 }
 
@@ -196,8 +222,34 @@ function protokollZeile(e) {
   return '<div class="abweichung protokoll"><span class="zeit">' + wann(Date.parse(e.zeit), Date.now()) + '</span><span class="info"><b>' + esc(name) + '</b> · ' + esc(was) + '<br>' + esc(e.wer) + '</span></div>';
 }
 
+function protokollHtml() {
+  return '<section class="abschnitt"><h2>Änderungen</h2>' +
+    (A.protokollFehler ? '<p class="fehler-text">' + esc(A.protokollFehler) + '</p>'
+      : !A.protokoll ? '<div class="leer klein"><span class="dreher" aria-hidden="true"></span> Lädt …</div>'
+        : A.protokoll.length ? A.protokoll.map(protokollZeile).join('')
+          : '<div class="leer klein">Keine Einträge sichtbar. Ist das Konto als Admin freigegeben?</div>') +
+    '</section>';
+}
+
+// Große Bildschirme (ab 1200 px): links die Sensoren, in der Mitte der gewählte Sensor zum Bearbeiten,
+// rechts bzw. darunter die Änderungen. Kein Seitenwechsel beim Bearbeiten.
+function adminBreit(aktiv, aus) {
+  const liste = '<div class="ab-spalte ab-liste">' +
+    '<section class="abschnitt"><div class="angemeldet"><span>Angemeldet als <b>' + esc(A.email) + '</b></span><button class="knopf-2" data-aktion="admin-abmelden">Abmelden</button></div></section>' +
+    '<section class="abschnitt"><h2>Im Einsatz · ' + aktiv.length + '</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
+    '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
+    (aus.length ? '<section class="abschnitt"><h2>Ausgemustert · ' + aus.length + '</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +
+    '</div>';
+  const mitte = '<div class="ab-spalte ab-form">' +
+    (A.meldung ? '<div class="meldung ' + A.meldung.art + '">' + esc(A.meldung.text) + '</div>' : '') +
+    (A.form ? formularHtml(A.form, true)
+      : '<div class="ab-leer"><b>Sensor wählen</b><span>Links einen Sensor antippen, um Name, Standort, Grenze und Zeiten zu ändern – oder „Neuer Sensor“.</span></div>') +
+    '</div>';
+  return '<main class="admin-breit">' + liste + mitte + '<div class="ab-spalte ab-protokoll">' + protokollHtml() + '</div></main>';
+}
+
 export function adminSeite() {
-  let html = kopf('Sensoren verwalten', 'zurueck') + '<main class="einstellungen">';
+  let html = kopf('Sensoren verwalten', 'zurueck', true) + '<main class="einstellungen">';
   if (A.fehler && !A.bereit) return html + '<div class="leer zustand fehler">' + esc(A.fehler) + '<button class="knopf-2" data-aktion="admin-oeffnen">Nochmal versuchen</button></div></main>';
   if (!A.bereit) return html + '<div class="leer zustand"><span class="dreher" aria-hidden="true"></span> Lädt …</div></main>';
   if (!A.email) {
@@ -210,34 +262,33 @@ export function adminSeite() {
       '<button type="submit" class="primaer"' + (A.laedt ? ' disabled' : '') + '>' + (A.laedt ? 'Melde an …' : 'Anmelden') + '</button></form></section></main>';
   }
   const aktiv = D.sensoren.filter((s) => s.aktiv), aus = D.sensoren.filter((s) => !s.aktiv);
+  if (Z.layout.breit) return html.replace('<main class="einstellungen">', '') + adminBreit(aktiv, aus);
   html += (A.meldung ? '<div class="meldung ' + A.meldung.art + '">' + esc(A.meldung.text) + '</div>' : '') +
     '<section class="abschnitt"><div class="angemeldet"><span>Angemeldet als <b>' + esc(A.email) + '</b></span><button class="knopf-2" data-aktion="admin-abmelden">Abmelden</button></div></section>' +
     '<section class="abschnitt"><h2>Im Einsatz</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
     '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
     (aus.length ? '<section class="abschnitt"><h2>Ausgemustert</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +
-    '<section class="abschnitt"><h2>Änderungen</h2>' +
-    (A.protokollFehler ? '<p class="fehler-text">' + esc(A.protokollFehler) + '</p>'
-      : !A.protokoll ? '<div class="leer klein"><span class="dreher" aria-hidden="true"></span> Lädt …</div>'
-        : A.protokoll.length ? A.protokoll.map(protokollZeile).join('')
-          : '<div class="leer klein">Keine Einträge sichtbar. Ist das Konto als Admin freigegeben?</div>') +
-    '</section></main>';
+    protokollHtml() + '</main>';
   return html;
 }
 
 export function adminSensorSeite() {
   const f = A.form;
-  if (!f) { Z.seite = 'admin'; return adminSeite(); }
+  if (!f || Z.layout.breit) { Z.seite = 'admin'; return adminSeite(); }
+  return kopf(f.neu ? 'Neuer Sensor' : esc(f.name), 'admin-zurueck', true) + '<main class="einstellungen">' + formularHtml(f, false) + '</main>';
+}
+
+function formularHtml(f, breit) {
   const standorte = [...new Set(D.sensoren.map((s) => s.standort).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
   const feld = (id, label, wert, extra, hilfe) => '<div class="feld"><label for="' + id + '">' + label + '</label><input id="' + id + '" value="' + esc(wert) + '" ' + (extra || '') + '>' + (hilfe ? '<span class="hilfe">' + hilfe + '</span>' : '') + '</div>';
-  return kopf(f.neu ? 'Neuer Sensor' : esc(f.name), 'admin-zurueck') +
-    '<main class="einstellungen"><form id="sensor-form" class="formular" novalidate>' +
+  return '<form id="sensor-form" class="formular' + (breit ? ' breit' : '') + '" novalidate>' +
+    (breit ? '<h2 class="form-titel">' + (f.neu ? 'Neuer Sensor' : esc(f.name)) + '</h2>' : '') +
     '<section class="abschnitt"><h2>Sensor</h2>' +
     (f.neu ? feld('s-mac', 'MAC-Adresse', f.mac, 'autocomplete="off" spellcheck="false" placeholder="AA:BB:CC:DD:EE:FF" autocapitalize="characters"', 'Lässt sich nach dem Anlegen nicht mehr ändern. Neuer Tag = neuer Sensor.')
       : '<div class="info-zeile"><b>MAC-Adresse</b><span>' + esc(f.mac) + '</span></div>') +
     feld('s-name', 'Name', f.name, 'maxlength="40" autocomplete="off"', 'Höchstens 40 Zeichen. Zwei Sensoren im Einsatz dürfen nicht gleich heißen.') +
     feld('s-standort', 'Standort', f.standort, 'list="standorte" autocomplete="off"', 'Überschrift der Gruppe, z. B. Halle oder ein Wagen.') +
     '<datalist id="standorte">' + standorte.map((s) => '<option value="' + esc(s) + '">').join('') + '</datalist>' +
-    feld('s-reihenfolge', 'Reihenfolge', f.reihenfolge, 'inputmode="numeric"', 'Kleinere Zahl steht weiter vorn.') +
     '</section>' +
     '<section class="abschnitt"><h2>Bewertung</h2>' +
     feld('s-grenze', 'Grenze (höchste Temperatur, °C)', f.grenze, 'inputmode="decimal" autocomplete="off"', 'Darüber ist der Wert zu warm. Leer lassen = keine Grenze.') +
@@ -250,8 +301,9 @@ export function adminSensorSeite() {
     '<div class="feld"><label for="s-notiz">Notiz</label><textarea id="s-notiz" rows="3">' + esc(f.notiz) + '</textarea></div>' +
     '</section>' +
     (A.formFehler ? '<p class="meldung fehler" role="alert">' + esc(A.formFehler) + '</p>' : '') +
-    '<button type="submit" class="primaer"' + (A.speichert ? ' disabled' : '') + '>' + (A.speichert ? 'Speichert …' : 'Speichern') + '</button>' +
-    '</form></main>';
+    '<div class="form-knoepfe"><button type="submit" class="primaer"' + (A.speichert ? ' disabled' : '') + '>' + (A.speichert ? 'Speichert …' : 'Speichern') + '</button>' +
+    (breit ? '<button type="button" class="knopf-2" data-aktion="admin-zurueck">Schließen</button>' : '') + '</div>' +
+    '</form>';
 }
 
 // Werte aus dem Formular lesen (vor jedem Neuzeichnen, damit nichts verloren geht)
