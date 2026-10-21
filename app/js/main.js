@@ -47,9 +47,11 @@ function layout() {
   L.schmal = w < 560;
   L.breit = w >= 1200;
   L.quer = !L.breit && w > h && w >= 860;
+  L.geteilt = L.breit;      // Laptop/Monitor (ab 1200 px): Übersicht links, Verlauf rechts daneben
   app.classList.toggle('schmal', L.schmal);
   app.classList.toggle('quer', L.quer);
   app.classList.toggle('breit', L.breit);
+  app.classList.toggle('geteilt', L.geteilt);
 }
 
 // ---------- Rendern ----------
@@ -59,6 +61,7 @@ function seitenInhalt() {
   if (Z.seite === 'detail' && !sensorVon(Z.sensor)) Z.seite = 'uebersicht';
   if (!konfig() && Z.seite !== 'einrichtung') Z.seite = 'einrichtung';
   if (Z.seite === 'detail') verlaufSicherstellen();
+  if (Z.layout.geteilt && (Z.seite === 'uebersicht' || Z.seite === 'detail')) return geteilt();
   switch (Z.seite) {
     case 'detail': return detail();
     case 'einstellungen': return einstellungen();
@@ -67,6 +70,25 @@ function seitenInhalt() {
     case 'admin-sensor': return admin ? admin.adminSensorSeite() : '';
     default: return uebersicht();
   }
+}
+
+// Großer Bildschirm (≥ 1700 px): Übersicht und Verlauf nebeneinander. Ohne Auswahl
+// zeigt rechts der wichtigste Sensor (erste Karte = Alarm/Problem zuerst).
+function geteilt() {
+  if (!Z.sensor || !sensorVon(Z.sensor) || !sensorVon(Z.sensor).aktiv) {
+    // wichtigster Sensor: Alarm vor Meldet nicht vor Achtung vor OK vor Offline
+    const RANGFOLGE = ['alarm', 'meldet', 'achtung', 'ok', 'ohne', 'offline'];
+    let best = null;
+    for (const m of uebersicht().matchAll(/st-(\w+)[^>]*?data-sensor="([^"]+)"/g)) {
+      const r = RANGFOLGE.indexOf(m[1]);
+      if (!best || (r >= 0 && r < best.r)) best = { r: r < 0 ? 99 : r, mac: m[2] };
+    }
+    Z.sensor = best ? best.mac : null;
+  }
+  if (Z.sensor) verlaufSicherstellen();
+  const rechts = Z.sensor ? detail().replace(/<button class="zurueck"[^]*?<\/button>/, '') : '<div class="leer">Sensor antippen, um den Verlauf zu sehen.</div>';
+  return '<div class="geteilt-raster"><div class="g-links">' + uebersicht().replace('data-sensor="' + Z.sensor + '"', 'data-sensor="' + Z.sensor + '" aria-current="true"') + '</div>' +
+    '<aside class="g-rechts" aria-label="Verlauf">' + rechts + '</aside></div>';
 }
 
 function render() {
@@ -114,11 +136,11 @@ function verlaufSicherstellen() {
   }).then((punkte) => {
     if (!Z.verlauf || Z.verlauf.key !== key) return;
     Z.verlauf = { key, punkte };
-    if (Z.seite === 'detail') nachDaten();
+    if (Z.seite === 'detail' || Z.layout.geteilt) nachDaten();
   }).catch((fehler) => {
     if (!Z.verlauf || Z.verlauf.key !== key) return;
     Z.verlauf = { key, fehler, punkte: alt && alt.punkte };
-    if (Z.seite === 'detail') nachDaten();
+    if (Z.seite === 'detail' || Z.layout.geteilt) nachDaten();
   });
 }
 
@@ -172,7 +194,11 @@ app.addEventListener('click', async (e) => {
   }
   if (el.dataset.vorlage) { Z.zeitraum = el.dataset.vorlage; Z.blatt = null; Z.zeitraumFehler = null; render(); return; }
   if (a === 'blatt-zu') { if (e.target === el) { Z.blatt = null; Z.zeitraumFehler = null; render(); } return; }
-  if (el.dataset.sensor && !a) { Z.sensor = el.dataset.sensor; Z.verlauf = null; seite('detail'); return; }
+  if (el.dataset.sensor && !a) {
+    Z.sensor = el.dataset.sensor; Z.verlauf = null;
+    if (Z.layout.geteilt) { Z.seite = 'detail'; render(); return; }   // Übersicht bleibt stehen, rechts wechselt der Verlauf
+    seite('detail'); return;
+  }
   if (el.dataset.zeitraum) { Z.zeitraum = el.dataset.zeitraum; render(); return; }
   switch (a) {
     case 'zeitraum-blatt': Z.blatt = 'zeitraum'; break;
@@ -226,7 +252,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', () => { if (konfig()) aktualisieren(); });
 let rTimer;
-window.addEventListener('resize', () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const alt = JSON.stringify(Z.layout); layout(); if (JSON.stringify(Z.layout) !== alt) { if (Z.seite === 'detail') render(); else diagramm(); } }, 150); });
+window.addEventListener('resize', () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const alt = JSON.stringify(Z.layout); layout(); if (JSON.stringify(Z.layout) !== alt) { if (Z.seite === 'detail' || Z.seite.startsWith('admin') || alt.includes('"geteilt":' + !Z.layout.geteilt)) render(); else diagramm(); } }, 150); });
 beiAenderung(nachDaten);
 
 // ---------- Service Worker (App-Dateien + Schriften offline) ----------

@@ -131,7 +131,8 @@ export function diagramm() {
   const lang = istLang(von, bis);
   const pts = lang ? tageswerte(roh) : roh;
   const hatGrenze = s.grenze !== null;
-  const W = Math.max(280, huelle.clientWidth), H = Math.round(Math.min(320, Math.max(220, W * 0.5)));
+  // Höhe: auf großen Bildschirmen (nebeneinander) bis 45 % der Fensterhöhe, sonst höchstens 320 px
+  const W = Math.max(280, huelle.clientWidth), H = Math.round(Math.min(Z.layout.geteilt ? Math.max(320, window.innerHeight * 0.45) : 320, Math.max(220, W * 0.5)));
   const L = 52, R = 12, T = 14, B = 34;
   const werte = lang ? pts.flatMap((p) => [p.min, p.max]) : pts.map((p) => p.v);
   if (hatGrenze) werte.push(s.grenze);
