@@ -9,6 +9,7 @@ export const Z = {
   ausschnitt: merk.lies('ausschnitt', false),   // Ausschnitt im Diagramm ziehen – Standard AUS (stört das Wischen auf dem Handy)
   auswahl: null,           // { von, bis } in ms – im Diagramm gezogener Ausschnitt (zeitraum 'auswahl')
   vorAuswahl: null,        // { zeitraum, eigen } – wohin „Ganzer Zeitraum“ zurückführt
+  alarmArt: merk.lies('alarm-art', 'genau'),   // 'genau' (15-Min-Regel) | 'stunde' (Stundenmittel wie im HACCP-Export)
   markiert: null,          // { mac, von, bis, stufe } – angeklickte Zeile „Über … °C“, im Diagramm markiert
   zeitraumFehler: null,
   filter: null,            // gewählter Standort (null = alle)

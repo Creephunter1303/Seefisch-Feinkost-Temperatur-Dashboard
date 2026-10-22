@@ -2,7 +2,7 @@
 // Ohne Framework. Läuft in Node:      node tests/status.test.mjs
 // und im Browser (falls kein Node):  tests/index.html über einen lokalen Server öffnen
 
-import { REGEL, laeufe, stufeVon, status, heuteAlarm } from '../app/js/status.js';
+import { REGEL, laeufe, stufeVon, status, heuteAlarm, stundenLaeufe } from '../app/js/status.js';
 import { versatzMin, mitternacht, tagKey, tagesBeginn, uhr, wann, bereich, teile, MIN, STD } from '../app/js/zeit.js';
 import { tageswerte } from '../app/js/ansichten/detail.js';
 
@@ -172,6 +172,31 @@ test('Tageswerte am 25.10.: alle 300 Werte (25 Std) in einem Tag', () => {
 });
 
 // ---------- Ausgabe ----------
+
+// ---------- Alarm nach Stundenmittel (Einstellung, wie HACCP-Export) ----------
+// 08:00–09:00 UTC = 10–11 Uhr Berlin (Sommerzeit)
+test('Stundenmittel: kurze Spitze bleibt OK, 6–7-Mittel über Grenze = Alarm', () => {
+  const p = reihe('2026-10-20T08:00:00Z', [6, 6, 9, 9, 9, 9, 6, 6, 6, 6, 6, 6, 6]);  // 10:00–11:00 Ø 7,0 + 1 Wert 11:00
+  gleich(status(S7, p, T('2026-10-20T09:01:00Z'), null, undefined, 'stunde').stufe, 'ok', 'Ø genau 7,0');
+  const q = reihe('2026-10-20T08:00:00Z', [6, 6, 9, 9, 9, 9, 9, 6, 6, 6, 6, 6]);       // Ø 7,25, noch kein Wert ab 11:00
+  const st = status(S7, q, T('2026-10-20T09:02:00Z'), null, undefined, 'stunde');
+  gleich(st.stufe, 'alarm'); gleich(st.text, 'Alarm · seit 10:00 Stundenmittel über 7 °C');
+});
+test('Stundenmittel: laufende Stunde bisher drüber = Achtung, vorbei = „!“ auf der Karte', () => {
+  const p = reihe('2026-10-20T08:00:00Z', [8, 8, 8]);
+  gleich(status(S7, p, T('2026-10-20T08:11:00Z'), null, undefined, 'stunde').text, 'Achtung · Stundenmittel bisher 8,0 °C');
+  const q = reihe('2026-10-20T08:00:00Z', [...Array(12).fill(8), 5]);
+  gleich(status(S7, q, T('2026-10-20T09:01:00Z'), null, undefined, 'stunde').stufe, 'ok');
+  const h = heuteAlarm(S7, q, T('2026-10-20T09:01:00Z'), 'stunde');
+  gleich([uhr(h.von), uhr(h.bis + 5 * MIN), h.schnitt], ['10:00', '11:00', 8]);
+});
+test('Stundenmittel: angeschnittene erste Stunde zählt nicht, Lücke trennt', () => {
+  const p = reihe('2026-10-20T08:30:00Z', [9, 9, 9, 9, 9, 9]);
+  gleich(stundenLaeufe(p, 7, T('2026-10-20T08:30:00Z')).length, 0);
+  const q = [...reihe('2026-10-20T08:00:00Z', Array(12).fill(8)), ...reihe('2026-10-20T10:00:00Z', Array(12).fill(8))];
+  gleich(stundenLaeufe(q, 7).map((l) => l.stunden), [1, 1]);
+});
+
 const fehler = ergebnisse.filter((e) => !e.ok);
 export { ergebnisse, fehler, REGEL };
 if (typeof process !== 'undefined' && process.versions && process.versions.node) {

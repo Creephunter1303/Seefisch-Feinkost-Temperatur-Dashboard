@@ -32,6 +32,7 @@ export function einstellungen() {
   const k = konfig();
   const projekt = k ? k.url.replace(/^https?:\/\//, '').replace(/\.supabase\.co$/, '') : '–';
   const admin = adminAngemeldet();
+  const stunde = Z.alarmArt === 'stunde';
   return '<header class="kopf unter"><button class="zurueck" data-aktion="zurueck">' + ICON.zurueck + 'Zurück</button><h1 class="seitentitel">Einstellungen</h1></header>' +
     '<main class="einstellungen">' +
     (Z.meldung ? '<div class="meldung ' + Z.meldung.art + '">' + esc(Z.meldung.text) + '</div>' : '') +
@@ -44,9 +45,15 @@ export function einstellungen() {
     '<div class="schalter-zeile"><div class="schalter-text"><strong>Startansicht</strong><span>Welcher Standort beim Öffnen gezeigt wird</span></div><button class="auswahl" data-aktion="blatt-start">' + ICON.pin + '<span>' + esc(Z.start || 'Alle') + '</span>' + ICON.runter + '</button></div>' +
     '</section>' +
     '<section class="abschnitt"><h2>So wird bewertet</h2>' +
-    '<div class="regel">' + chip('ok') + '<span class="t">unter der Grenztemperatur des Sensors</span></div>' +
-    '<div class="regel">' + chip('achtung') + '<span class="t">über der Grenze, aber höchstens ' + REGEL.toleranzMin + ' Min – z. B. Tür kurz offen</span></div>' +
-    '<div class="regel">' + chip('alarm') + '<span class="t">länger als ' + REGEL.toleranzMin + ' Min über der Grenze oder mehr als ' + REGEL.sofortUeberGrenze + ' °C darüber</span></div>' +
+    '<div class="schalter-zeile"><div class="schalter-text"><strong>Alarm nach Stundenmittel</strong><span>Wie im HACCP-Export: zählt der Durchschnitt je volle Stunde (z. B. 6–7 Uhr). Aus: jede Überschreitung einzeln.</span></div>' +
+    '<button type="button" class="kipp' + (stunde ? ' an' : '') + '" role="switch" aria-checked="' + stunde + '" aria-label="Alarm nach Stundenmittel" data-aktion="alarm-art-schalter"></button></div>' +
+    (stunde
+      ? '<div class="regel">' + chip('ok') + '<span class="t">Stundenmittel unter der Grenztemperatur des Sensors</span></div>' +
+        '<div class="regel">' + chip('achtung') + '<span class="t">die laufende Stunde liegt bisher im Mittel über der Grenze</span></div>' +
+        '<div class="regel">' + chip('alarm') + '<span class="t">eine volle Stunde lag im Mittel über der Grenze</span></div>'
+      : '<div class="regel">' + chip('ok') + '<span class="t">unter der Grenztemperatur des Sensors</span></div>' +
+        '<div class="regel">' + chip('achtung') + '<span class="t">über der Grenze, aber höchstens ' + REGEL.toleranzMin + ' Min – z. B. Tür kurz offen</span></div>' +
+        '<div class="regel">' + chip('alarm') + '<span class="t">länger als ' + REGEL.toleranzMin + ' Min über der Grenze oder mehr als ' + REGEL.sofortUeberGrenze + ' °C darüber</span></div>') +
     '<div class="regel">' + chip('offline') + '<span class="t">seit ' + grau + ' kein Wert – normal, wenn der Wagen unterwegs ist</span></div>' +
     '<div class="regel">' + chip('meldet') + '<span class="t">seit ' + rot + ' kein Wert – Sensor prüfen</span></div>' +
     '</section>' +

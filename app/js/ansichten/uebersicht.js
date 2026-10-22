@@ -9,7 +9,7 @@ import { STD, MIN, uhr } from '../zeit.js';
 import { knopfAuslesen } from './auslesen.js';
 import { adminAngemeldet } from './admin-status.js';
 
-export function statusVon(s, b = bezug()) { return status(s, punkteVon(s.mac), b, D.letzter.get(s.mac), D.fensterAb); }
+export function statusVon(s, b = bezug()) { return status(s, punkteVon(s.mac), b, D.letzter.get(s.mac), D.fensterAb, Z.alarmArt); }
 
 // Mini-Kurve der letzten 6 Std mit gestrichelter Grenzlinie (nur OK/Achtung/Alarm)
 function spark(s, st, w, h) {
@@ -34,8 +34,8 @@ export function karte(s, gross) {
   const b = bezug();
   const st = statusVon(s, b);
   const wert = st.stufe === 'meldet' ? (st.last ? '<small class="zuletzt">zuletzt</small> ' + grad(st.last.v) : 'kein Wert') : grad(st.last.v);
-  const ha = (st.stufe === 'ok' || st.stufe === 'offline') ? heuteAlarm(s, punkteVon(s.mac), b) : null;
-  const haText = ha ? 'Heute ' + uhr(ha.von) + '–' + uhr(ha.bis + 5 * MIN) + ' über ' + grenzText(s.grenze) + ' · max ' + grad(ha.max) : '';
+  const ha = (st.stufe === 'ok' || st.stufe === 'offline') ? heuteAlarm(s, punkteVon(s.mac), b, Z.alarmArt, D.fensterAb) : null;
+  const haText = ha ? 'Heute ' + uhr(ha.von) + '–' + uhr(ha.bis + 5 * MIN) + ' über ' + grenzText(s.grenze) + (ha.schnitt === undefined ? ' · max ' + grad(ha.max) : ' · Ø ' + grad(ha.schnitt)) : '';
   // Detail: ganzer Satz. Kachel: nur ein „!“ hinter dem Namen, damit alle Kacheln gleich hoch bleiben
   const hinweis = ha && gross ? '<span class="t-hinweis">' + ICON.hinweis + '<span>' + haText + '</span></span>' : '';
   const merker = ha && !gross ? '<span class="t-merker" title="' + haText + '" aria-hidden="true">!</span>' : '';

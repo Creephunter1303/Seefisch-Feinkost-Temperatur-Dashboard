@@ -224,6 +224,9 @@ app.addEventListener('click', async (e) => {
       Z.ausschnitt = !Z.ausschnitt; merk.schreib('ausschnitt', Z.ausschnitt);
       if (!Z.ausschnitt && Z.zeitraum === 'auswahl') ausschnittAufheben();
       break;
+    case 'alarm-art-schalter':
+      Z.alarmArt = Z.alarmArt === 'stunde' ? 'genau' : 'stunde'; merk.schreib('alarm-art', Z.alarmArt);
+      break;
     // Info zum Sensoren-Verwalten
     case 'admin-info': Z.blatt = 'admininfo'; break;
     case 'info-zu': Z.blatt = null; break;

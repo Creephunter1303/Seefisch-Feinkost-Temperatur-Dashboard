@@ -8,7 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.3** (21.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.4** (22.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -83,7 +83,7 @@ hinterlegt“ (nie still OK).
   (3 Werte = 15 Min = Achtung, 4 Werte = 20 Min = Alarm).
 - `grenze + 3` wird auf 2 Nachkommastellen gerundet (6,3 + 3 = 9,3 exakt).
 - Beginnt eine Strecke am Anfang der geladenen Daten → „seit mind. …“.
-- Tests: `tests/status.test.mjs` (26 Fälle inkl. −18 °C, Tages-/Monatswechsel, 25.10.2026 = 25-Std-Tag,
+- Tests: `tests/status.test.mjs` (29 Fälle inkl. Stundenmittel, −18 °C, Tages-/Monatswechsel, 25.10.2026 = 25-Std-Tag,
   29.03.2026 = 23-Std-Tag). Läuft mit `node` und im Browser (`tests/index.html`).
 
 ## Entscheidungen (mit Max, 20.10.2026)
@@ -138,6 +138,16 @@ hinterlegt“ (nie still OK).
   Namen (`.t-merker`, Text im `title`/`aria-label`), damit alle Kacheln gleich hoch bleiben. Der ganze Satz
   steht nur noch auf der großen Karte im Detail. **Abmelden im Admin braucht einen zweiten Klick**
   („Wirklich abmelden?“, `A.abmeldenFragen`).
+
+## Entscheidungen (mit Max, 22.10.2026 → v0.2.4)
+
+- **Schalter „Alarm nach Stundenmittel“** (Einstellungen → So wird bewertet, pro Gerät, localStorage
+  `sf-temp-alarm-art`, `Z.alarmArt` = `'genau'` | `'stunde'`, Standard `genau`). Rechnet wie der
+  HACCP-Export (`ruuvi-haccp/export/bericht.html`): Mittel aller Werte je voller Stunde Berliner Zeit,
+  **Mittel > Grenze** = Alarm. Laufende Stunde bisher drüber = Achtung. Keine +3-°C-Sofortregel.
+  Angeschnittene Stunden am Anfang der geladenen Daten zählen nicht (`ab`). Code: `status.stundenLaeufe`,
+  `stundenStufe`; `status()`/`heuteAlarm()` mit Parameter `art`. Max hat die HACCP-Konformität selbst geklärt.
+  Das Diagramm bleibt unverändert (rote Rohwerte).
 
 ## Dateien
 

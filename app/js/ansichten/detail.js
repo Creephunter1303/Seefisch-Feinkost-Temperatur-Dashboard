@@ -4,7 +4,7 @@
 import { ICON } from '../icons.js';
 import { Z, esc, gruppeVon, istWagen, OHNE_ZUORDNUNG } from '../zustand.js';
 import { D, aktive, sensorVon, bezug } from '../daten.js';
-import { laeufe, stufeVon, REGEL, WORT, grad, zahl, grenzText } from '../status.js';
+import { laeufe, stufeVon, stundenLaeufe, stundenStufe, REGEL, WORT, grad, zahl, grenzText } from '../status.js';
 import { karte } from './uebersicht.js';
 import { knopfAuslesen } from './auslesen.js';
 import {
@@ -76,7 +76,7 @@ export function detail() {
       '<div class="kennzahl"><span class="k">Tiefst</span><span class="v">' + grad(mn.v) + '</span><span class="z">' + wann(mn.t, j) + '</span></div>' +
       '<div class="kennzahl"><span class="k">Höchst</span><span class="v">' + grad(mx.v) + '</span><span class="z">' + wann(mx.t, j) + '</span></div>' +
       '<div class="kennzahl"><span class="k">Mittel</span><span class="v">' + grad(sum / pts.length) + '</span><span class="z">' + pts.length.toLocaleString('de-DE') + ' Werte</span></div></div>';
-    abw = abweichungen(s, pts, j);
+    abw = abweichungen(s, pts, j, von);
     chart = '<div class="diagramm-flaeche" id="diagramm"></div>' + legende(s, istLang(von, bis), pts.some((p) => p.tab));
   } else {
     const vorStart = D.seit && bis <= D.seit;
@@ -105,24 +105,27 @@ function legende(s, lang, tab) {
     '<span><i class="luecke"></i>keine Daten</span></div>';
 }
 
-function abweichungen(s, pts, j) {
+// Einstellung „Alarm nach Stundenmittel“: ganze Stunden statt einzelner Strecken
+function abweichungen(s, pts, j, von) {
   if (s.grenze === null) return '<section class="abschnitt"><h2>Grenze</h2><div class="leer klein">Für diesen Sensor ist keine Grenztemperatur hinterlegt.</div></section>';
-  const l = laeufe(pts, s.grenze).reverse();
-  const titel = '<section class="abschnitt"><h2>Über ' + grenzText(s.grenze) + '</h2>';
-  if (!l.length) return titel + '<div class="leer klein">Keine Werte über der Grenze in diesem Zeitraum.</div></section>';
   const b = bezug();
+  const stunde = Z.alarmArt === 'stunde';
+  const l = (stunde ? stundenLaeufe(pts, s.grenze, von, b) : laeufe(pts, s.grenze)).reverse();
+  const stufe = (x) => (stunde ? stundenStufe(x) : stufeVon(x, s.grenze));
+  const titel = '<section class="abschnitt"><h2>' + (stunde ? 'Stundenmittel über ' : 'Über ') + grenzText(s.grenze) + '</h2>';
+  if (!l.length) return titel + '<div class="leer klein">' + (stunde ? 'Keine Stunde im Mittel über der Grenze' : 'Keine Werte über der Grenze') + ' in diesem Zeitraum.</div></section>';
   const letzte = pts[pts.length - 1];
   const zeile = (x) => {
-    const st = stufeVon(x, s.grenze);
-    const laufend = x.bis === letzte.t && (b - x.bis) / MIN < s.grauMin;
+    const st = stufe(x);
+    const laufend = stunde ? x.offen : x.bis === letzte.t && (b - x.bis) / MIN < s.grauMin;
     const tagTxt = gleicherTag(x.von, j) ? '' : (j - x.von < 6 * TAG ? wochentag(x.von) + ' ' : datum(x.von) + ' ');
     const an = markiert() && markiert().von === x.von;
-    return '<button type="button" class="abweichung lauf' + (an ? ' gewaehlt' : '') + '" data-lauf="' + x.von + '-' + (x.bis + 5 * MIN) + '" data-stufe="' + st + '" aria-pressed="' + an + '" title="Im Diagramm markieren"><span class="zeit">' + tagTxt + uhr(x.von) + '–' + (laufend ? 'jetzt' : uhr(x.bis + 5 * MIN)) + '</span><span class="info">' + dauer(x.min) + ' · max ' + grad(x.max) + '</span><span class="status-chip ' + st + '">' + WORT[st] + '</span></button>';
+    return '<button type="button" class="abweichung lauf' + (an ? ' gewaehlt' : '') + '" data-lauf="' + x.von + '-' + (x.bis + 5 * MIN) + '" data-stufe="' + st + '" aria-pressed="' + an + '" title="Im Diagramm markieren"><span class="zeit">' + tagTxt + uhr(x.von) + '–' + (laufend ? 'jetzt' : uhr(x.bis + 5 * MIN)) + '</span><span class="info">' + dauer(x.min) + ' · ' + (stunde ? (x.stunden > 1 ? 'Ø bis ' : 'Ø ') + grad(x.schnitt) : 'max ' + grad(x.max)) + '</span><span class="status-chip ' + st + '">' + WORT[st] + '</span></button>';
   };
   // kurze Zeiträume: alles einzeln; lange: Alarme einzeln, kurze Spitzen als eine Zeile
   if (l.length <= 8) return titel + l.map(zeile).join('') + '</section>';
-  const alarme = l.filter((x) => stufeVon(x, s.grenze) === 'alarm');
-  const kurz = l.filter((x) => stufeVon(x, s.grenze) === 'achtung');
+  const alarme = stunde ? l : l.filter((x) => stufe(x) === 'alarm');
+  const kurz = stunde ? [] : l.filter((x) => stufe(x) === 'achtung');
   const tage = new Set(kurz.map((x) => tagKey(x.von))).size;
   return titel + (alarme.length ? alarme.slice(0, 12).map(zeile).join('') : '<div class="leer klein">Kein Alarm in diesem Zeitraum.</div>') +
     (alarme.length > 12 ? '<div class="mehr-zeile">… und ' + (alarme.length - 12) + ' weitere Alarme</div>' : '') +
