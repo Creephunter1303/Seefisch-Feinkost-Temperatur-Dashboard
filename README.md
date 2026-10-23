@@ -92,8 +92,8 @@ ersetzen).
 - Ab 1200 px Breite (Laptop/Monitor) liegen Liste, Formular und Änderungen auf einer Seite.
 - Die Reihenfolge der Sensoren ist im Formular nicht mehr einstellbar; vorhandene Werte bleiben.
 - Das Anmeldekonto legt das Pi-Projekt an (PLAN-STAMMDATEN.md, Phase 4).
-- Die Anzeige übernimmt Änderungen sofort. Der Pi übernimmt sie nach ≤ 10 Min, sobald dort die
-  Übernahme aus Supabase eingeschaltet ist (Phase 3).
+- Die Anzeige übernimmt Änderungen sofort. Der Pi übernimmt sie nach ≤ 10 Min (seit 23.10.2026).
+- Standorte: im Admin-Bereich unter „Standorte“ anlegen und umbenennen, beim Sensor auswählen.
 - „Meldet nicht nach“ ab 240 Minuten bei allen Sensoren eines Standorts → der Standort gilt als
   Wagen (Wagen-Symbol, Zusatz „unterwegs“).
 

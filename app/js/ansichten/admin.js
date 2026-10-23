@@ -257,7 +257,7 @@ export async function speichern(werte) {
     else if (!res.data || !res.data.length) A.formFehler = 'Nicht gespeichert: keine Berechtigung. Das Konto ist nicht als Admin freigegeben.';
     else {
       const t = Date.now();
-      A.meldung = { art: 'info', text: '„' + p.zeile.name + '“ gespeichert um ' + uhr(t) + '. Die Anzeige gilt sofort. Der Pi übernimmt es spätestens um ' + uhr(t + PI_TAKT_MIN * MIN) + ' (sobald dort die Übernahme aus Supabase eingeschaltet ist).' };
+      A.meldung = { art: 'info', text: '„' + p.zeile.name + '“ gespeichert um ' + uhr(t) + '. Die Anzeige gilt sofort. Der Pi übernimmt es spätestens um ' + uhr(t + PI_TAKT_MIN * MIN) + '.' };
       const macNach = A.form.neu ? p.zeile.mac : A.form.mac;
       A.form = null; Z.seite = 'admin';
       await Promise.all([aktualisieren({ voll: true }), ladeProtokoll()]);
@@ -289,7 +289,7 @@ export function infoBlatt() {
     '<li>Standort = Überschrift der Gruppe. Neue Standorte unter „Standorte“ anlegen, dann beim Sensor auswählen. Ein Wagen heißt so wie sein Standort. Bei Wagen „Meldet nicht nach“ auf mindestens ' + WAGEN_AB_MIN + ' Minuten lassen, sonst zählt der Standort nicht als Wagen („unterwegs“).</li></ul>' +
     '<h3>Sensor wegnehmen (nicht ersetzt)</h3><ul><li>„Im Einsatz“ ausschalten. Die Karte verschwindet, der Verlauf bleibt, der Pi zeichnet ihn nicht mehr auf. Wieder einschalten geht, solange der Name frei ist.</li></ul>' +
     '<h3>Gut zu wissen</h3><ul>' +
-    '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten, sobald dort die Übernahme aus der Datenbank eingeschaltet ist. Bis dahin misst er nur die Sensoren, die er schon kennt – ein neuer Sensor bekommt dann noch keine Werte.</li>' +
+    '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten. Ein neuer Sensor bekommt erst danach Werte.</li>' +
     '<li>Unter „Änderungen“ steht, wer wann was geändert hat.</li></ul>' +
     '<button class="primaer" data-aktion="info-zu">Verstanden</button></div></div>';
 }

@@ -8,7 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.5** (23.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.6** (23.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -208,6 +208,7 @@ vorlage/, bluetooth-test/  Gestaltungsvorlage + Machbarkeitstest Phase 2 (nicht 
 - Optional ans Pi-Projekt: Spalte `art` in `sensoren` statt der 240-Min-Regel; `eingetragen_am` in
   `messwerte_benannt`.
 - Standortname „Seiko“ (Supabase) vs. „Seico“ (Bestell-App) angleichen – jetzt per „Standorte“ umbenennen.
-- Pi-Projekt (nicht hier): Phase 3 „Umschalten“ (`stammdaten.quelle` probe → supabase auf dem Pi 4) und
-  Export auf `sensoren.temp_max` umstellen (PLAN-STAMMDATEN Phase 5). Bis dahin übernimmt der Pi
-  Änderungen aus dem Admin-Bereich nicht.
+- Pi-Projekt (nicht hier): Export auf `sensoren.temp_max` umstellen (PLAN-STAMMDATEN Phase 5), mit Max
+  vorerst zurückgestellt. Seit Phase 3 (Pi 4, 23.10.2026, Commit `28157db`) übernimmt der Pi Änderungen aus
+  `sensoren` in config.json und zieht `sensor_gruppen` (Standort, Grenze …) nach, der Export sieht neue
+  Grenzen also schon jetzt.
