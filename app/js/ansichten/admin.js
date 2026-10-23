@@ -10,6 +10,7 @@
 import { ICON } from '../icons.js';
 import { Z, esc, WAGEN_AB_MIN } from '../zustand.js';
 import { D, aktualisieren } from '../daten.js';
+import { merk } from '../speicher.js';
 import { konfig } from '../rest.js';
 import { grenzText } from '../status.js';
 import { MIN, uhr, wann, dauer } from '../zeit.js';
@@ -24,7 +25,102 @@ const A = {
   form: null,          // Bearbeiten/Anlegen: { neu, mac, name, standort, … }
   formFehler: null, speichert: false,
   abmeldenFragen: false,   // „Abmelden“ braucht einen zweiten Klick
+  standort: null,          // Blatt Standort: { alt: Name oder null (= neu), fehler, speichert }
 };
+
+// ---------- Standorte ----------
+// Eine eigene Tabelle gibt es nicht (Schema gehört dem Pi-Projekt): ein Standort ist der Text in
+// sensoren.standort. Neu angelegte Standorte ohne Sensor merkt sich nur dieses Gerät, bis ihnen
+// ein Sensor zugeordnet ist. Umbenennen ändert alle Sensoren mit diesem Standort.
+const sortiert = (a) => [...new Set(a)].sort((x, y) => x.localeCompare(y, 'de'));
+function standorteInDb() { return sortiert(D.sensoren.map((s) => s.standort).filter(Boolean)); }
+function standorteNeu() {
+  const db = new Set(standorteInDb());
+  const neu = merk.lies('standorte-neu', []).filter((x) => !db.has(x));
+  merk.schreib('standorte-neu', neu);
+  return neu;
+}
+export const standorte = () => sortiert([...standorteInDb(), ...standorteNeu()]);
+
+export function standortOeffnen(alt) { A.standort = { alt: alt || null, fehler: null, speichert: false }; Z.blatt = 'admin-standort'; }
+
+export async function standortSpeichern(eingabe) {
+  const st = A.standort;
+  const name = String(eingabe || '').trim().replace(/\s+/g, ' ');
+  const fehler = (t) => { st.fehler = t; neuZeichnen(); };
+  if (!name) return fehler('Bitte einen Namen eintragen.');
+  if (name.length > 40) return fehler('Der Name darf höchstens 40 Zeichen haben.');
+  const da = standorte().find((x) => x.toLowerCase() === name.toLowerCase());
+  if (!st.alt) {
+    if (da) return fehler('Den Standort „' + da + '“ gibt es schon.');
+    merk.schreib('standorte-neu', [...standorteNeu(), name]);
+    A.meldung = { art: 'info', text: 'Standort „' + name + '“ angelegt. Er steht jetzt bei den Sensoren zur Auswahl und wird gespeichert, sobald ihm ein Sensor zugeordnet ist.' };
+    A.standort = null; Z.blatt = null; neuZeichnen(); return;
+  }
+  if (name === st.alt) { A.standort = null; Z.blatt = null; neuZeichnen(); return; }
+  if (da && da !== st.alt && !st.zusammen) { st.zusammen = true; return fehler('„' + da + '“ gibt es schon. Nochmal „Speichern“ = die Sensoren von „' + st.alt + '“ kommen zu „' + da + '“.'); }
+  const ziel = da && da !== st.alt ? da : name;
+  // nur auf diesem Gerät gemerkt → ohne Datenbank umbenennen
+  if (standorteNeu().includes(st.alt)) {
+    merk.schreib('standorte-neu', standorteNeu().map((x) => (x === st.alt ? ziel : x)));
+  } else {
+    st.speichert = true; st.fehler = null; neuZeichnen();
+    try {
+      const c = await client();
+      const res = await c.from('sensoren').update({ standort: ziel }).eq('standort', st.alt).select();
+      if (res.error) { st.speichert = false; return fehler(fehlerText(res.error)); }
+      if (!res.data || !res.data.length) { st.speichert = false; return fehler('Nicht gespeichert: keine Berechtigung. Das Konto ist nicht als Admin freigegeben.'); }
+      A.meldung = { art: 'info', text: 'Standort „' + st.alt + '“ heißt jetzt „' + ziel + '“ (' + res.data.length + (res.data.length === 1 ? ' Sensor' : ' Sensoren') + ').' };
+    } catch (e) { st.speichert = false; return fehler(fehlerText(e)); }
+  }
+  // Einstellungen dieses Geräts mitziehen (auf anderen Geräten einmal neu wählen)
+  if (Z.start === st.alt) { Z.start = ziel; merk.schreib('start', ziel); }
+  if (Z.wagen === st.alt) { Z.wagen = ziel; merk.schreib('wagen', ziel); }
+  if (Z.filter === st.alt) Z.filter = ziel;
+  if (A.form && A.form.standort === st.alt) A.form.standort = ziel;
+  A.standort = null; Z.blatt = null;
+  await Promise.all([aktualisieren({ voll: true }), ladeProtokoll()]);
+  neuZeichnen();
+}
+
+// Ein Standort, der nur auf diesem Gerät gemerkt ist, lässt sich wieder entfernen
+export function standortEntfernen() {
+  const alt = A.standort && A.standort.alt;
+  merk.schreib('standorte-neu', standorteNeu().filter((x) => x !== alt));
+  A.standort = null; Z.blatt = null; neuZeichnen();
+}
+
+export function standortBlatt() {
+  const st = A.standort;
+  if (!st) return '';
+  const nurHier = st.alt && standorteNeu().includes(st.alt);
+  const anz = st.alt ? D.sensoren.filter((s) => s.standort === st.alt).length : 0;
+  return '<div class="blatt-grund" data-aktion="blatt-zu"><div class="blatt" role="dialog" aria-label="Standort">' +
+    '<h2>' + (st.alt ? 'Standort umbenennen' : 'Neuer Standort') + '</h2>' +
+    '<form id="standort-form" class="formular" novalidate>' +
+    '<div class="feld"><label for="st-name">Name</label><input id="st-name" maxlength="40" autocomplete="off" value="' + esc(st.alt || '') + '"></div>' +
+    '<p class="erklaerung">' + (!st.alt ? 'Überschrift einer Gruppe, z. B. Halle oder ein Wagen. Danach bei den Sensoren auswählen.'
+      : nurHier ? 'Noch keinem Sensor zugeordnet.'
+        : 'Ändert den Standort bei ' + anz + (anz === 1 ? ' Sensor' : ' Sensoren') + ' (auch ausgemusterte). Jede Änderung steht unter „Änderungen“.') + '</p>' +
+    (st.fehler ? '<p class="fehler-text" role="alert">' + esc(st.fehler) + '</p>' : '') +
+    '<button type="submit" class="primaer"' + (st.speichert ? ' disabled' : '') + '>' + (st.speichert ? 'Speichert …' : st.alt ? 'Speichern' : 'Anlegen') + '</button>' +
+    (nurHier ? '<button type="button" class="knopf-2" data-aktion="admin-standort-weg">Standort entfernen</button>' : '') +
+    '<button type="button" class="knopf-2" data-aktion="info-zu">Abbrechen</button>' +
+    '</form></div></div>';
+}
+
+function standorteHtml() {
+  const neu = new Set(standorteNeu());
+  const zeile = (n) => {
+    const ss = D.sensoren.filter((s) => s.standort === n);
+    const ein = ss.filter((s) => s.aktiv).length, aus = ss.length - ein;
+    const z = neu.has(n) ? 'noch kein Sensor · nur auf diesem Gerät gemerkt' : ein + ' im Einsatz' + (aus ? ' · ' + aus + ' ausgemustert' : '');
+    return '<button class="blatt-zeile admin-zeile" data-aktion="admin-standort" data-standort="' + esc(n) + '"><span class="n">' + esc(n) + '<span class="z">' + z + '</span></span>' + ICON.weiter + '</button>';
+  };
+  const alle = standorte();
+  return '<section class="abschnitt"><h2>Standorte · ' + alle.length + '</h2><div class="admin-liste">' + (alle.map(zeile).join('') || '<div class="leer klein">Noch keine Standorte.</div>') + '</div>' +
+    '<button class="knopf-2 neu-knopf" data-aktion="admin-standort-neu">' + ICON.plus + 'Neuer Standort</button></section>';
+}
 
 let neuZeichnen = () => {};
 export function init(rendern) { neuZeichnen = rendern; }
@@ -190,7 +286,7 @@ export function infoBlatt() {
     '<li>Der alte Verlauf bleibt beim ausgemusterten Sensor, der neue Verlauf beginnt bei null. Beide sind nicht zusammengelegt.</li></ol>' +
     '<h3>Neuen Sensor hinzufügen</h3><ul>' +
     '<li>MAC-Adresse bereithalten (AA:BB:CC:DD:EE:FF, auch ohne Doppelpunkte möglich).</li>' +
-    '<li>Standort = Überschrift der Gruppe. Ein Wagen heißt so wie sein Standort. Bei Wagen „Meldet nicht nach“ auf mindestens ' + WAGEN_AB_MIN + ' Minuten lassen, sonst zählt der Standort nicht als Wagen („unterwegs“).</li></ul>' +
+    '<li>Standort = Überschrift der Gruppe. Neue Standorte unter „Standorte“ anlegen, dann beim Sensor auswählen. Ein Wagen heißt so wie sein Standort. Bei Wagen „Meldet nicht nach“ auf mindestens ' + WAGEN_AB_MIN + ' Minuten lassen, sonst zählt der Standort nicht als Wagen („unterwegs“).</li></ul>' +
     '<h3>Sensor wegnehmen (nicht ersetzt)</h3><ul><li>„Im Einsatz“ ausschalten. Die Karte verschwindet, der Verlauf bleibt, der Pi zeichnet ihn nicht mehr auf. Wieder einschalten geht, solange der Name frei ist.</li></ul>' +
     '<h3>Gut zu wissen</h3><ul>' +
     '<li>Änderungen gelten in der Anzeige sofort. Der Raspberry Pi übernimmt sie spätestens nach ' + PI_TAKT_MIN + ' Minuten, sobald dort die Übernahme aus der Datenbank eingeschaltet ist. Bis dahin misst er nur die Sensoren, die er schon kennt – ein neuer Sensor bekommt dann noch keine Werte.</li>' +
@@ -249,6 +345,7 @@ function adminBreit(aktiv, aus) {
     angemeldetHtml() +
     '<section class="abschnitt"><h2>Im Einsatz · ' + aktiv.length + '</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
     '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
+    standorteHtml() +
     (aus.length ? '<section class="abschnitt"><h2>Ausgemustert · ' + aus.length + '</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +
     '</div>';
   const mitte = '<div class="ab-spalte ab-form">' +
@@ -278,6 +375,7 @@ export function adminSeite() {
     angemeldetHtml() +
     '<section class="abschnitt"><h2>Im Einsatz</h2><div class="admin-liste">' + (aktiv.map(zeileSensor).join('') || '<div class="leer klein">Keine Sensoren im Einsatz.</div>') + '</div>' +
     '<button class="primaer neu-knopf" data-aktion="admin-neu">' + ICON.plus + 'Neuer Sensor</button></section>' +
+    standorteHtml() +
     (aus.length ? '<section class="abschnitt"><h2>Ausgemustert</h2><p class="erklaerung">Keine Kachel mehr, der Verlauf bleibt erhalten.</p><div class="admin-liste">' + aus.map(zeileSensor).join('') + '</div></section>' : '') +
     protokollHtml() + '</main>';
   return html;
@@ -290,7 +388,8 @@ export function adminSensorSeite() {
 }
 
 function formularHtml(f, breit) {
-  const standorte = [...new Set(D.sensoren.map((s) => s.standort).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+  const liste = standorte();
+  if (f.standort && !liste.includes(f.standort)) liste.push(f.standort);
   const feld = (id, label, wert, extra, hilfe) => '<div class="feld"><label for="' + id + '">' + label + '</label><input id="' + id + '" value="' + esc(wert) + '" ' + (extra || '') + '>' + (hilfe ? '<span class="hilfe">' + hilfe + '</span>' : '') + '</div>';
   return '<form id="sensor-form" class="formular' + (breit ? ' breit' : '') + '" novalidate>' +
     (breit ? '<h2 class="form-titel">' + (f.neu ? 'Neuer Sensor' : esc(f.name)) + '</h2>' : '') +
@@ -298,8 +397,9 @@ function formularHtml(f, breit) {
     (f.neu ? feld('s-mac', 'MAC-Adresse', f.mac, 'autocomplete="off" spellcheck="false" placeholder="AA:BB:CC:DD:EE:FF" autocapitalize="characters"', 'Lässt sich nach dem Anlegen nicht mehr ändern. Neuer Tag = neuer Sensor.')
       : '<div class="info-zeile"><b>MAC-Adresse</b><span>' + esc(f.mac) + '</span></div>') +
     feld('s-name', 'Name', f.name, 'maxlength="40" autocomplete="off"', 'Höchstens 40 Zeichen. Zwei Sensoren im Einsatz dürfen nicht gleich heißen.') +
-    feld('s-standort', 'Standort', f.standort, 'list="standorte" autocomplete="off"', 'Überschrift der Gruppe, z. B. Halle oder ein Wagen.') +
-    '<datalist id="standorte">' + standorte.map((s) => '<option value="' + esc(s) + '">').join('') + '</datalist>' +
+    '<div class="feld"><label for="s-standort">Standort</label><select id="s-standort"><option value="">Ohne Standort</option>' +
+    liste.map((s) => '<option value="' + esc(s) + '"' + (s === f.standort ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select>' +
+    '<span class="hilfe">Überschrift der Gruppe. Neue Standorte unter „Standorte“ in der Liste anlegen.</span></div>' +
     '</section>' +
     '<section class="abschnitt"><h2>Bewertung</h2>' +
     feld('s-grenze', 'Grenze (höchste Temperatur, °C)', f.grenze, 'inputmode="decimal" autocomplete="off"', 'Darüber ist der Wert zu warm. Leer lassen = keine Grenze.') +

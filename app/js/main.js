@@ -94,7 +94,7 @@ function geteilt() {
 
 function render() {
   const inhalt = seitenInhalt();
-  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt === 'auslesen' ? (A.gruppe ? blattAuslesen() : '') : Z.blatt === 'admininfo' ? (admin ? admin.infoBlatt() : '') : Z.blatt ? blattStandort() : '';
+  const blatt = Z.blatt === 'zeitraum' ? blattZeitraum() : Z.blatt === 'auslesen' ? (A.gruppe ? blattAuslesen() : '') : Z.blatt === 'admininfo' ? (admin ? admin.infoBlatt() : '') : Z.blatt === 'admin-standort' ? (admin ? admin.standortBlatt() : '') : Z.blatt ? blattStandort() : '';
   app.innerHTML = '<div id="seite">' + inhalt + '</div><div id="blatt-platz">' + blatt + '</div>';
   document.body.classList.toggle('blatt-offen', !!blatt);
   diagramm();
@@ -244,6 +244,9 @@ app.addEventListener('click', async (e) => {
     case 'admin-neu': admin.meldungWeg(); admin.bearbeiten(null); return;
     case 'admin-sensor': admin.meldungWeg(); admin.bearbeiten(el.dataset.mac); return;
     case 'admin-zurueck': admin.zurueckZurListe(); window.scrollTo(0, 0); return;
+    case 'admin-standort-neu': admin.meldungWeg(); admin.standortOeffnen(null); break;
+    case 'admin-standort': admin.meldungWeg(); admin.standortOeffnen(el.dataset.standort); break;
+    case 'admin-standort-weg': admin.standortEntfernen(); return;
     case 'admin-kipp': el.classList.toggle('an'); el.setAttribute('aria-checked', el.classList.contains('an')); return;
     default: return;
   }
@@ -261,6 +264,7 @@ app.addEventListener('submit', (e) => {
   } else if (id === 'einrichtung-form') einrichtungPruefen(wert('e-url'), wert('e-key'));
   else if (id === 'login-form') admin.anmelden(wert('l-mail'), wert('l-pw'));
   else if (id === 'sensor-form') admin.speichern(admin.formLesen());
+  else if (id === 'standort-form') admin.standortSpeichern(wert('st-name'));
 });
 
 // ---------- Nachladen: alle 5 Min, nur solange die App sichtbar ist ----------

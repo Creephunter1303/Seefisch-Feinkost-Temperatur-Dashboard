@@ -8,7 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.4** (22.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.5** (23.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -149,6 +149,18 @@ hinterlegt“ (nie still OK).
   `stundenStufe`; `status()`/`heuteAlarm()` mit Parameter `art`. Max hat die HACCP-Konformität selbst geklärt.
   Das Diagramm bleibt unverändert (rote Rohwerte).
 
+## Entscheidungen (mit Max, 23.10.2026 → v0.2.5)
+
+- Admin-Speichern und „Am Wagen auslesen“ hat Max echt getestet (zuhause + Wochenmarkt): funktioniert.
+- **Admin: Abschnitt „Standorte“** + Standort im Sensor-Formular als **Auswahl** (`<select>`) statt
+  Freitext. Ohne eigene Tabelle (kein Schema ändern): Standort = Text in `sensoren.standort`.
+  **Umbenennen** = `update sensoren set standort = neu where standort = alt` (auch ausgemusterte, je Sensor
+  ein Protokolleintrag; gibt es den Namen schon, werden die Gruppen nach zweitem „Speichern“ zusammengelegt).
+  **Neuer Standort ohne Sensor** liegt nur auf diesem Gerät (localStorage `sf-temp-standorte-neu`), bis ein
+  Sensor ihn bekommt. Der Pi vergleicht `standort` nicht (`collector/stammdaten.py`), Umbenennen stört ihn nicht.
+  „Startansicht“/„Gerät gehört zu“ werden nur auf dem Gerät mitgezogen, auf dem umbenannt wurde.
+- Alarmierung: verschoben. Wagen-Spalte `art`: vorerst nicht. Stundenmittel-Schalter bleibt pro Gerät.
+
 ## Dateien
 
 ```
@@ -161,7 +173,7 @@ app/                     ← wird veröffentlicht
   js/zustand.js          UI-Zustand Z, istWagen         js/speicher.js localStorage + IndexedDB
   js/bluetooth.js        Ruuvi per Web Bluetooth lesen (NUS, 3A 3A 11), ohne DOM
   js/ansichten/          uebersicht, detail (+ Diagramm, Ausschnitt, Zeitraum-Blatt), einstellungen
-                         (+ Einrichtung), auslesen (Knopf + Blatt), admin (lazy), admin-status
+                         (+ Einrichtung), auslesen (Knopf + Blatt), admin (lazy, + Standorte), admin-status
 tests/                   status.test.mjs, index.html (Browser-Läufer)
 werkzeuge/screenshots.py echte Screenshots via Chrome DevTools-Protokoll
 vergleich/               index.html (Vorlage ↔ App), echt/*.png, ABWEICHUNGEN.md
@@ -192,11 +204,10 @@ vorlage/, bluetooth-test/  Gestaltungsvorlage + Machbarkeitstest Phase 2 (nicht 
 
 ## Offen
 
-- **Admin-Speichern echt testen** (Max, angemeldet): Notiz eines Sensors ändern und zurück, breite
-  Maske ab 1200 px, Fehlermeldungen (doppelter Name, MAC-Format).
-- **„Am Wagen auslesen“ am Tablet am Wagen testen**: Koppeln per Name „Ruuvi XXXX“, Lesen, gemerkte
-  Geräte beim zweiten Mal (`getDevices`), Dauer je Sensor.
 - Alarmierung/Benachrichtigung (Max, später).
 - Optional ans Pi-Projekt: Spalte `art` in `sensoren` statt der 240-Min-Regel; `eingetragen_am` in
   `messwerte_benannt`.
-- Standortname „Seiko“ (Supabase) vs. „Seico“ (Bestell-App) angleichen – im Admin-Bereich.
+- Standortname „Seiko“ (Supabase) vs. „Seico“ (Bestell-App) angleichen – jetzt per „Standorte“ umbenennen.
+- Pi-Projekt (nicht hier): Phase 3 „Umschalten“ (`stammdaten.quelle` probe → supabase auf dem Pi 4) und
+  Export auf `sensoren.temp_max` umstellen (PLAN-STAMMDATEN Phase 5). Bis dahin übernimmt der Pi
+  Änderungen aus dem Admin-Bereich nicht.
