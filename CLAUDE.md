@@ -8,7 +8,7 @@ PWA „Temperaturen“ für Seefisch-Feinkost: zeigt die Kühltemperaturen der R
 (Übersicht je Standort, Verlauf je Sensor). **Phase 1 = Anzeige** (fertig, v0.1.0) plus
 Admin-Bereich für die Sensor-Stammdaten. **Phase 2 = „Am Wagen auslesen“** per Web Bluetooth
 (gebaut in v0.2.0 nach `vorlage/VORLAGE.md` „Neu in v0.3“, **noch nie an einem echten Sensor
-gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.6** (23.10.2026).
+gelaufen**, nur mit nachgebautem Sensor im Browser geprüft). Stand: **v0.2.7** (24.10.2026).
 
 - Reines HTML/CSS/JS mit ES-Modulen, **kein Framework, kein Build-Schritt**.
 - Backend = Supabase (PostgREST) direkt aus dem Browser. Kein eigener Server.
@@ -160,6 +160,9 @@ hinterlegt“ (nie still OK).
   Sensor ihn bekommt. Der Pi vergleicht `standort` nicht (`collector/stammdaten.py`), Umbenennen stört ihn nicht.
   „Startansicht“/„Gerät gehört zu“ werden nur auf dem Gerät mitgezogen, auf dem umbenannt wurde.
 - Alarmierung: verschoben. Wagen-Spalte `art`: vorerst nicht. Stundenmittel-Schalter bleibt pro Gerät.
+- **v0.2.7: „Einrichtungslink kopieren“ und „Einrichtung ändern“ nur mit Admin-Anmeldung** auf dem Gerät
+  (`adminAngemeldet()`, auch in `main.js` abgefangen), weil beide den Schlüssel zeigen. Ohne Anmeldung steht dort
+  ein Hinweis. Ein Gerät ohne Einrichtung kommt weiter direkt zur Einrichtung.
 
 ## Dateien
 

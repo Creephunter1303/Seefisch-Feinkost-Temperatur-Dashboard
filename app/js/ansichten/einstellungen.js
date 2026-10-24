@@ -69,7 +69,10 @@ export function einstellungen() {
     '<div class="info-zeile"><b>Daten diesen Monat</b><span>ca. ' + mb(verbrauch()) + '</span></div>' +
     '<div class="info-zeile"><b>Version</b><span>' + APP_VERSION + '</span></div>' +
     '<div class="info-zeile"><b>Verbindung</b><span>Projekt ' + esc(projekt) + '</span></div>' +
-    '<div class="knopf-reihe"><button class="knopf-2" data-aktion="link-kopieren">Einrichtungslink kopieren</button><button class="knopf-2" data-aktion="einrichtung">Einrichtung ändern</button></div>' +
+    // enthält den Schlüssel → nur mit Admin-Anmeldung auf diesem Gerät, damit ihn nicht jeder mit Zugriff aufs Tablet weitergeben kann
+    (admin
+      ? '<div class="knopf-reihe"><button class="knopf-2" data-aktion="link-kopieren">Einrichtungslink kopieren</button><button class="knopf-2" data-aktion="einrichtung">Einrichtung ändern</button></div>'
+      : '<p class="hinweis-text">Einrichtung ändern und Einrichtungslink kopieren: nur nach Anmeldung im Admin-Bereich.</p>') +
     '</section></main>';
 }
 

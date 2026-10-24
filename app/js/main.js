@@ -6,6 +6,7 @@ import { merk } from './speicher.js';
 import { D, aktualisieren, beiAenderung, ladeGespeichert, ladeVerlauf, sensorVon, vergessen, tabletVerwerfen } from './daten.js';
 import { konfig, konfigSpeichern, normalisiereUrl, keyIstGeheim, zaehle } from './rest.js';
 import { uebersicht, blattStandort } from './ansichten/uebersicht.js';
+import { adminAngemeldet } from './ansichten/admin-status.js';
 import { detail, diagramm, blattZeitraum, eigenPruefen, verlaufKey, jetztZeit, zr, beiAusschnitt, ausschnittAufheben } from './ansichten/detail.js';
 import { A, blattAuslesen, beiAuslesen, starte as auslesenStarten, koppelnUndLesen, schliessen as auslesenSchliessen } from './ansichten/auslesen.js';
 import { einstellungen, einrichtung } from './ansichten/einstellungen.js';
@@ -209,7 +210,8 @@ app.addEventListener('click', async (e) => {
     case 'filter-weg': Z.filter = Z.start; break;
     case 'einstellungen': seite('einstellungen'); return;
     case 'zurueck': seite('uebersicht'); return;
-    case 'einrichtung': einrichtungForm = null; seite('einrichtung'); return;
+    // Einrichtung zeigt den Schlüssel: nur mit Admin-Anmeldung (oder solange das Gerät noch keine hat)
+    case 'einrichtung': if (konfig() && !adminAngemeldet()) return; einrichtungForm = null; seite('einrichtung'); return;
     case 'neu-laden': aktualisieren({ voll: !D.stand }); return;
     case 'verlauf-neu': Z.verlauf = null; break;
     // Am Wagen auslesen (Bluetooth, nur Arbeitsspeicher)
@@ -231,6 +233,7 @@ app.addEventListener('click', async (e) => {
     case 'admin-info': Z.blatt = 'admininfo'; break;
     case 'info-zu': Z.blatt = null; break;
     case 'link-kopieren': {
+      if (!adminAngemeldet()) return;
       const link = einrichtungsLink();
       try { await navigator.clipboard.writeText(link); Z.meldung = { art: 'info', text: 'Einrichtungslink kopiert. Auf dem anderen Gerät einmal öffnen, dann ist es eingerichtet. Der Link enthält den Schlüssel – nur an eigene Geräte geben.' }; }
       catch (x) { Z.meldung = { art: 'info', text: 'Einrichtungslink: ' + link }; }
